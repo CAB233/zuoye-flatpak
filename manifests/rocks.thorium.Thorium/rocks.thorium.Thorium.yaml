@@ -1,0 +1,142 @@
+app-id: rocks.thorium.Thorium
+runtime: org.freedesktop.Platform
+runtime-version: '25.08'
+sdk: org.freedesktop.Sdk
+base: org.chromium.Chromium.BaseApp
+base-version: '25.08'
+command: thorium
+separate-locales: false
+build-options:
+  no-debuginfo: true
+finish-args:
+  - --device=all
+  - --share=ipc
+  - --share=network
+  - --socket=cups
+  - --socket=pcsc # FIDO2
+  - --socket=pulseaudio
+  - --socket=x11
+  - --socket=wayland
+  - --require-version=1.8.2
+  - --system-talk-name=org.bluez
+  - --system-talk-name=org.freedesktop.UPower
+  - --talk-name=org.freedesktop.FileManager1
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.freedesktop.ScreenSaver
+  - --talk-name=org.freedesktop.secrets
+  - --talk-name=org.kde.kwalletd5
+  - --talk-name=org.kde.kwalletd6
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --talk-name=org.gnome.SessionManager
+  - --system-talk-name=org.freedesktop.Avahi
+  - --own-name=org.mpris.MediaPlayer2.chromium.*
+  - --filesystem=/run/.heim_org.h5l.kcm-socket
+  - --filesystem=host-etc
+  - --filesystem=xdg-run/pipewire-0
+  - --filesystem=xdg-documents
+  - --filesystem=xdg-download
+  - --filesystem=xdg-music
+  - --filesystem=xdg-videos
+  - --filesystem=xdg-pictures
+  # For GNOME proxy resolution
+  - --filesystem=xdg-run/dconf
+  - --filesystem=~/.config/dconf:ro
+  - --talk-name=ca.desrt.dconf
+  - --env=GTK_PATH=/app/lib/gtkmodules
+  - --env=DCONF_USER_CONFIG_DIR=.config/dconf
+  - --env=GIO_EXTRA_MODULES=/app/lib/gio/modules
+  - --env=GSETTINGS_BACKEND=dconf
+  # For KDE proxy resolution (KDE5 only)
+  - --filesystem=~/.config/kioslaverc
+cleanup:
+  - '*.a'
+  - '*.la'
+  - /include
+  - /lib/cmake
+  - /lib/debug
+  - /lib/pkgconfig
+  - /man
+  - /share/man
+  - /share/doc
+  - /share/gtk-doc
+
+modules:
+  - name: dconf
+    buildsystem: meson
+    config-opts:
+      - -Dbash_completion=false
+      - -Dman=false
+      - -Dvapi=false
+    cleanup:
+      - /etc
+      - /include
+      - ca.desrt.dconf.service
+      - dconf.service
+      - dconf-service
+      - '*.pc'
+    sources:
+      - type: archive
+        url: https://download.gnome.org/sources/dconf/0.49/dconf-0.49.0.tar.xz
+        sha256: 16a47e49a58156dbb96578e1708325299e4c19eea9be128d5bd12fd0963d6c36
+        x-checker-data:
+          type: gnome
+          name: dconf
+          stable-only: true
+      # From: https://src.fedoraproject.org/rpms/dconf
+      - type: patch
+        path: dconf-override.patch
+
+  - name: zypak
+    sources:
+      - type: git
+        url: https://github.com/refi64/zypak
+        tag: v2025.09
+        commit: 693a71c5ffa80ec9c9ce2ae03b1ccc493c698e53
+        x-checker-data:
+          type: git
+          tag-pattern: ^v([\d.]+)$
+
+  - name: thorium
+    buildsystem: simple
+    build-commands:
+      - mkdir -p "${FLATPAK_DEST}"/thorium
+      - bsdtar --no-same-owner -xf thorium.zip -C "${FLATPAK_DEST}"/thorium
+      - install -Dvm755 thorium.sh "${FLATPAK_DEST}"/bin/thorium
+      - install -Dvm644 cobalt.ini -t "${FLATPAK_DEST}"/etc
+      - install -Dvm644 rocks.thorium.Thorium.desktop -t "${FLATPAK_DEST}"/share/applications
+      - install -Dvm644 rocks.thorium.Thorium.metainfo.xml -t "${FLATPAK_DEST}"/share/metainfo
+      - install -Dvm644 rocks.thorium.Thorium.svg -t "${FLATPAK_DEST}"/share/icons/hicolor/scalable/apps/
+    cleanup:
+      - /thorium/chrome-management-service
+      - /thorium/content_shell.pak
+      - /thorium/default-app-block
+      - /thorium/initial_preferences
+      - /thorium/pak
+      - '/thorium/product_logo_*'
+      - /thorium/shell_resources.pak
+      - '/thorium/thorium_shell*'
+      - '/thorium/*.desktop'
+      - /thorium/THORIUM-PORTABLE
+      - '/thorium/xdg-*'
+    sources:
+      - type: file
+        url: https://github.com/Alex313031/thorium/releases/download/M138.0.7204.303/thorium-browser_138.0.7204.303_SSE3.zip
+        sha256: 31362085f7a0630fc935162cae5906eb39302c8f88aca2a1aa84581e3527bc50
+        dest-filename: thorium.zip
+        only-arches:
+          - x86_64
+        x-checker-data:
+          type: anitya
+          project-id: 373887
+          stable-only: true
+          url-template: https://github.com/Alex313031/thorium/releases/download/M$version/thorium-browser_$version_SSE3.zip
+      - type: file
+        path: thorium.sh
+      - type: file
+        path: cobalt.ini
+      - type: file
+        path: rocks.thorium.Thorium.desktop
+      - type: file
+        path: rocks.thorium.Thorium.metainfo.xml
+      - type: file
+        path: rocks.thorium.Thorium.svg
