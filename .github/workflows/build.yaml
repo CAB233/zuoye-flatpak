@@ -52,6 +52,7 @@ jobs:
           if [ -n "${{ github.event.inputs.apps }}" ]; then
             echo "apps=${{ github.event.inputs.apps }}" >> $GITHUB_OUTPUT
             echo "has_changes=true" >> $GITHUB_OUTPUT
+            exit 0
           fi
 
           apps=""
