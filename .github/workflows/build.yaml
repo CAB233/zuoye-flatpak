@@ -1,0 +1,140 @@
+name: Build and publish
+
+on:
+  push:
+    branches:
+      - stable
+    paths:
+      - "manifests/**"
+  workflow_dispatch:
+    inputs:
+      apps:
+        description: "手动指定 APP ID（空格分隔）"
+        type: string
+        required: false
+        default: ""
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+env:
+  MANIFESTS_DIR: ${{ vars.MANIFESTS_DIR }}
+  REPO_NAME: ${{ vars.REPO_NAME }}
+  BUILD_DIR: ${{ vars.BUILD_DIR }}
+
+jobs:
+  metadata:
+    runs-on: ubuntu-24.04
+    outputs:
+      apps: ${{ steps.matrix.outputs.apps }}
+      has_changes: ${{ steps.matrix.outputs.has_changes }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Diff as json
+        id: diff
+        uses: GrantBirki/git-diff-action@v2.8.1
+        with:
+          file_output_only: true
+          search_path: ${{ env.MANIFESTS_DIR }}
+          json_diff_file_output: diff.json
+
+      - name: Print json diff
+        run: cat ${{ steps.diff.outputs.json-diff-path }}
+
+      - name: Generate Matrix
+        id: matrix
+        run: |
+          if [ -n "${{ github.event.inputs.apps }}" ]; then
+            echo "apps=${{ github.event.inputs.apps }}" >> $GITHUB_OUTPUT
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+          apps=""
+          DIFF_FILE=${{ steps.diff.outputs.json-diff-path }}
+          for file in $(jq -r '.files[].path' "$DIFF_FILE"); do
+            if [[ "$file" =~ ^manifests/([^/]+)/ ]]; then
+              app_id="${BASH_REMATCH[1]}"
+              if [[ ! " $apps " =~ " $app_id " ]]; then
+                apps="$apps $app_id"
+              fi
+            fi
+          done
+          apps=$(echo "$apps" | xargs)
+
+          if [ -z "$apps" ]; then
+            echo "apps=" >> $GITHUB_OUTPUT
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "echo apps: $apps"
+            echo "apps=$apps" >> $GITHUB_OUTPUT
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+  build:
+    runs-on: ubuntu-24.04
+    needs: metadata
+    if: needs.metadata.outputs.has_changes == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install dependencies
+        run: |
+          sudo add-apt-repository -y ppa:flatpak/stable
+          sudo apt-get update -y
+          sudo apt-get install -y flatpak flatpak-builder
+
+      - name: Setup environment
+        run: flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v6.3.0
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+
+      - name: Build packages
+        id: build-packages
+        run: |
+          for app in ${{ needs.metadata.outputs.apps }}; do
+            manifest_file="${{ env.MANIFESTS_DIR }}/${app}/${app}.yaml"
+            flatpak-builder \
+              --user \
+              --force-clean \
+              --disable-updates \
+              --disable-rofiles-fuse \
+              --default-branch=stable \
+              --install-deps-from=flathub \
+              --repo=${{ env.REPO_NAME }} \
+              --gpg-sign=${{ secrets.GPG_KEY_FINGERPRINT }} \
+              ${{ env.BUILD_DIR }} \
+              "$manifest_file"
+          done
+
+      - name: Build repo
+        id: build-repo
+        run: |
+          flatpak build-sign \
+            --gpg-sign=${{ secrets.GPG_KEY_FINGERPRINT }} \
+            ${{ env.REPO_NAME }}
+
+          flatpak build-update-repo \
+            --prune \
+            --generate-static-deltas \
+            --gpg-sign=${{ secrets.GPG_KEY_FINGERPRINT }}
+            ${{ env.REPO_NAME }}
+
+      - name: Upload to R2
+        uses: ryand56/r2-upload-action@v1.4
+        with:
+          r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
+          r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
+          r2-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          r2-bucket: ${{ secrets.R2_BUCKET }}
+          source-dir: ${{ env.REPO_NAME }}
+          destination-dir: flatpak
+          keep-file-fresh: true
