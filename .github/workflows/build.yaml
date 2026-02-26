@@ -126,6 +126,7 @@ jobs:
           flatpak build-update-repo \
             --prune \
             --generate-static-deltas \
+            --static-delta-ignore-ref=*.Debug \
             --gpg-sign=${{ secrets.GPG_KEY_FINGERPRINT }} \
             ${{ env.REPO_NAME }}
 
