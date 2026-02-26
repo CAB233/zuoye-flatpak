@@ -130,7 +130,7 @@ modules:
           type: anitya
           project-id: 373887
           stable-only: true
-          url-template: https://github.com/Alex313031/thorium/releases/download/M$version/thorium-browser_$version_SSE3.zip
+          url-template: https://github.com/Alex313031/thorium/releases/download/M${version}/thorium-browser_${version}_SSE3.zip
       - type: file
         path: thorium.sh
       - type: file
