@@ -105,8 +105,9 @@ modules:
       - install -Dvm644 cobalt.ini -t "${FLATPAK_DEST}"/etc
       - install -Dvm644 rocks.thorium.Thorium.desktop -t "${FLATPAK_DEST}"/share/applications
       - install -Dvm644 rocks.thorium.Thorium.metainfo.xml -t "${FLATPAK_DEST}"/share/metainfo
-      - install -Dvm644 rocks.thorium.Thorium.svg -t "${FLATPAK_DEST}"/share/icons/hicolor/scalable/apps/
+      - install -Dvm644 "${FLATPAK_DEST}"/thorium/thorium.svg "${FLATPAK_DEST}"/share/icons/hicolor/scalable/apps/rocks.thorium.Thorium.svg
     cleanup:
+      - /thorium/thorium.svg
       - /thorium/chrome-management-service
       - /thorium/content_shell.pak
       - /thorium/default-app-block
@@ -138,5 +139,3 @@ modules:
         path: rocks.thorium.Thorium.desktop
       - type: file
         path: rocks.thorium.Thorium.metainfo.xml
-      - type: file
-        path: rocks.thorium.Thorium.svg
