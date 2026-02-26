@@ -18,6 +18,17 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
+# Secrets:
+# - GPG_PRIVATE_KEY: 用于签名的 GPG 私钥，直接使用原文即可
+# - GPG_KEY_FINGERPRINT: GPG 私钥的 ID，长的短的都可以，例如：99F583599B7E31F1
+# - R2_ACCOUNT_ID: 顾名思义
+# - R2_ACCESS_KEY_ID: 顾名思义
+# - R2_SECRET_ACCESS_KEY: 顾名思义
+# - R2_BUCKET: 顾名思义
+# Variables:
+# - MANIFESTS_DIR: manifest 存储根目录
+# - REPO_NAME: --repo=$REPO_NAME，需要上传的仓库元数据文件夹
+# - BUILD_DIR: 构建目录
 env:
   MANIFESTS_DIR: ${{ vars.MANIFESTS_DIR }}
   REPO_NAME: ${{ vars.REPO_NAME }}
