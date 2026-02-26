@@ -1,0 +1,59 @@
+name: Check and update
+
+on:
+  push:
+    paths:
+      - .github/workflows/check.yaml
+  schedule:
+    # At 06:06 UTC on Monday
+    - cron: "6 6 * * 1"
+  workflow_dispatch:
+
+# Variables:
+# - MANIFESTS_DIR: manifest 存储根目录
+env:
+  MANIFESTS_DIR: ${{ vars.MANIFESTS_DIR }}
+
+jobs:
+  metadata:
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Generate matrix
+        id: matrix
+        run: |
+          apps=()
+          for dir in ${{ env.MANIFESTS_DIR }}/*/; do
+            app_id=$(basename "$dir")
+            file="${{ env.MANIFESTS_DIR }}/${app_id}/${app_id}.yaml"
+            if [ -f "$file" ]; then
+              apps+=("$app_id")
+            fi
+          done
+          json=$(printf '%s\n' "${apps[@]}" | jq -R -n -c '[inputs] | {appid: .}')
+          echo "matrix=$json" >> $GITHUB_OUTPUT
+          echo "$json"
+
+  check-update:
+    needs: metadata
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix: ${{ fromJSON(needs.metadata.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Check and update
+        uses: docker://ghcr.io/flathub/flatpak-external-data-checker:latest
+        env:
+          GIT_AUTHOR_NAME: YanamiChan[bot]
+          GIT_COMMITTER_NAME: YanamiChan[bot]
+          GIT_AUTHOR_EMAIL: 182213109+YanamiChan[bot]@users.noreply.github.com
+          GIT_COMMITTER_EMAIL: 182213109+YanamiChan[bot]@users.noreply.github.com
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: --update --never-fork ${{ env.MANIFESTS_DIR }}/${{ matrix.appid }}/${{ matrix.appid }}.yaml
