@@ -141,6 +141,9 @@ jobs:
             --gpg-sign=${{ secrets.GPG_KEY_FINGERPRINT }} \
             ${{ env.REPO_NAME }}
 
+      - name: Copy .flatpakrepo to ${{ env.REPO_NAME }}
+        run: cp -v *.flatpakrepo ${{ env.REPO_NAME }}
+
       - name: Upload to R2
         uses: ryand56/r2-upload-action@v1.4
         with:
