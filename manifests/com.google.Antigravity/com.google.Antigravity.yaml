@@ -14,10 +14,11 @@ finish-args:
   - --socket=fallback-x11
   - --socket=pulseaudio
   - --socket=ssh-auth
-  - --device=all
-  - --allow=devel
+  - --socket=gpg-agent
+  - --device=dri
   - --filesystem=xdg-documents
   - --filesystem=xdg-download
+  - --persist=.
   - --env=LD_LIBRARY_PATH=/app/lib
   # required to fix cursor scaling on wayland
   - --env=XCURSOR_PATH=/run/host/user-share/icons:/run/host/share/icons
