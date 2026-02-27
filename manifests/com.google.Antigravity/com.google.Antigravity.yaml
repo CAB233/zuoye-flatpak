@@ -1,0 +1,139 @@
+id: com.google.Antigravity
+runtime: org.freedesktop.Platform
+runtime-version: "25.08"
+sdk: org.freedesktop.Sdk
+base: org.electronjs.Electron2.BaseApp
+base-version: "25.08"
+command: antigravity
+tags: [proprietary]
+separate-locales: false
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --socket=pulseaudio
+  - --socket=ssh-auth
+  - --device=all
+  - --allow=devel
+  - --filesystem=xdg-documents
+  - --filesystem=xdg-download
+  - --env=LD_LIBRARY_PATH=/app/lib
+  # required to fix cursor scaling on wayland
+  - --env=XCURSOR_PATH=/run/host/user-share/icons:/run/host/share/icons
+  - --system-talk-name=org.freedesktop.login1
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.freedesktop.secrets
+  - --talk-name=org.freedesktop.Flatpak
+  - --talk-name=com.canonical.AppMenu.Registrar
+  - --talk-name=com.canonical.AppMenu.Registrar.*
+cleanup:
+  - "*.a"
+  - "*.la"
+  - /include
+  - /lib/cmake
+  - /lib/debug
+  - /lib/pkgconfig
+  - /man
+  - /share/man
+  - /share/doc
+  - /share/gtk-doc
+
+modules:
+  - name: krb5
+    subdir: src
+    config-opts:
+      - --localstatedir=/var/lib
+      - --sbindir=${FLATPAK_DEST}/bin
+      - --disable-static
+      - --disable-rpath
+    sources:
+      - type: archive
+        url: https://github.com/krb5/krb5/archive/refs/tags/krb5-1.22.2-final.tar.gz
+        sha256: 289f5bb81d1f2f8d5eecebe56a056aeed95d35fd9bb4a7071c5dd7ad4b3fe888
+        x-checker-data:
+          type: anitya
+          project-id: 13287
+          stable-only: true
+          url-template: https://github.com/krb5/krb5/archive/refs/tags/krb5-$version.tar.gz
+      - type: shell
+        dest: src
+        commands:
+          - autoreconf -si
+    cleanup:
+      - /bin
+      - /share/et
+      - /share/examples
+
+  - name: krb5-config
+    buildsystem: simple
+    build-commands:
+      - install -Dvm644 krb5.conf -t ${FLATPAK_DEST}/etc
+    sources:
+      - type: file
+        path: krb5.conf
+
+  - name: host-spawn
+    buildsystem: simple
+    build-commands:
+      - install -Dvm755 host-spawn -t ${FLATPAK_DEST}/bin
+    sources:
+      - type: file
+        url: https://github.com/1player/host-spawn/releases/download/v1.6.2/host-spawn-x86_64
+        sha256: 077bc09a087292447ba17cfe2156a93f71bf56c4c6be8e38d3abe65c1240f34c
+        dest-filename: host-spawn
+        only-arches:
+          - x86_64
+        x-checker-data:
+          type: json
+          url: https://api.github.com/repos/1player/host-spawn/releases/latest
+          version-query: .tag_name
+          timestamp-query: .published_at
+          url-query:
+            '"https://github.com/1player/host-spawn/releases/download/" +
+            $version + "/host-spawn-x86_64"'
+
+  - name: antigravity
+    buildsystem: simple
+    build-commands:
+      - install -Dvm755 antigravity.sh ${FLATPAK_DEST}/bin/antigravity
+      - install -Dvm755 /usr/bin/ar -t ${FLATPAK_DEST}/bin
+      - install -Dvm644 ${FLATPAK_ID}.png -t ${FLATPAK_DEST}/share/icons/hicolor/256x256/apps
+      - install -Dvm644 ${FLATPAK_ID}.metainfo.xml -t ${FLATPAK_DEST}/share/metainfo
+      - install -Dvm644 ${FLATPAK_ID}-workspace.xml -t ${FLATPAK_DEST}/share/mime/packages
+      - install -Dvm644 ${FLATPAK_ID}.desktop -t ${FLATPAK_DEST}/share/applications
+      - install -Dvm644 ${FLATPAK_ID}-url-handler.desktop -t ${FLATPAK_DEST}/share/applications
+      # Use for extra_apply
+      - install -Dvm755 apply_extra -t ${FLATPAK_DEST}/bin
+      - ARCH_TRIPLE=$(gcc --print-multiarch) && cp /usr/lib/${ARCH_TRIPLE}/libbfd-*.so
+        /app/lib
+      - ARCH_TRIPLE=$(gcc --print-multiarch) && cp /usr/lib/${ARCH_TRIPLE}/libsframe*
+        /app/lib
+      - ARCH_TRIPLE=$(gcc --print-multiarch) && ln -s /usr/lib/${ARCH_TRIPLE}/libtinfo.so/app/lib/libtinfo.so.5
+    sources:
+      - type: extra-data
+        filename: antigravity.deb
+        only-arches:
+          - x86_64
+        url: https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/pool/antigravity-debian/antigravity_1.19.6-1772152296_amd64_4adf927f23143e77a9a759c97e46fe6f.deb
+        sha256: 04da15e1db2b7bd9c39708d62a2a42fc4e42ceafd977aac9a638c771117a3d7b
+        size: 159904276
+      - type: script
+        dest-filename: apply_extra
+        commands:
+          - ar x antigravity.deb
+          - tar xf data.tar.xz
+          - cp -r usr/share/antigravity antigravity
+          - rm -r antigravity.deb control.tar.xz data.tar.xz debian-binary usr/
+      - type: file
+        path: antigravity.sh
+      - type: file
+        path: com.google.Antigravity.png
+      - type: file
+        path: com.google.Antigravity.metainfo.xml
+      - type: file
+        path: com.google.Antigravity-workspace.xml
+      - type: file
+        path: com.google.Antigravity.desktop
+      - type: file
+        path: com.google.Antigravity-url-handler.desktop
