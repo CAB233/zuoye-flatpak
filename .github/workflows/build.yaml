@@ -156,10 +156,9 @@ jobs:
       - name: Download repo
         if: ${{ github.event.inputs.init_repo != 'true' }}
         run: |
-          rclone copy -v --copy-links --checksum --fast-list r2:${{ secrets.R2_BUCKET }}/flatpak ${{ env.REPO_NAME }}
+          rclone sync -v --copy-links --checksum --fast-list r2:${{ secrets.R2_BUCKET }}/flatpak ${{ env.REPO_NAME }}
 
       - name: Build packages
-        id: build-packages
         run: |
           for app in ${{ needs.metadata.outputs.apps }}; do
             manifest_file="${{ env.MANIFESTS_DIR }}/${app}/${app}.yaml"
@@ -177,7 +176,6 @@ jobs:
           done
 
       - name: Build repo
-        id: build-repo
         run: |
           flatpak build-sign \
             --gpg-sign=${{ secrets.GPG_KEY_FINGERPRINT }} \
@@ -192,8 +190,8 @@ jobs:
 
       - name: Upload repo
         run: |
-          rclone copy -v --copy-links --checksum --fast-list ${{ env.REPO_NAME }} r2:${{ secrets.R2_BUCKET }}/flatpak
-          rclone copy -v --copy-links --checksum --fast-list *.flatpakrepo r2:${{ secrets.R2_BUCKET }}/flatpak
+          rclone sync -v --copy-links --checksum --fast-list ${{ env.REPO_NAME }} r2:${{ secrets.R2_BUCKET }}/flatpak
+          rclone sync -v --copy-links --checksum --fast-list *.flatpakrepo r2:${{ secrets.R2_BUCKET }}/flatpak
 
       - name: Cache build
         if: always()
