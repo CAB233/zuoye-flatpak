@@ -116,6 +116,7 @@ jobs:
             endpoint = https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
             no_check_bucket = true
           disable_base64: true
+          version: v1.73.1
 
       - name: Import GPG
         uses: crazy-max/ghaction-import-gpg@v6.3.0
