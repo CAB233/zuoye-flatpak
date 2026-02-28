@@ -192,7 +192,7 @@ jobs:
 
       - name: Upload repo
         run: |
-          rclone sync -v --copy-links --checksum --fast-list --s3-directory-markers ${{ env.REPO_NAME }} r2:${{ secrets.R2_BUCKET }}/flatpak
+          rclone sync -v --copy-links --checksum --fast-list --create-empty-src-dirs --s3-directory-markers ${{ env.REPO_NAME }} r2:${{ secrets.R2_BUCKET }}/flatpak
           rclone sync -v --copy-links --checksum --fast-list *.flatpakrepo r2:${{ secrets.R2_BUCKET }}/flatpak
 
       - name: Cache build
