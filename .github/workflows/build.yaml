@@ -156,7 +156,7 @@ jobs:
       - name: Download repo
         if: ${{ github.event.inputs.init_repo != 'true' }}
         run: |
-          rclone copy -v --copy-links --checksum r2:${{ secrets.R2_BUCKET }}/flatpak ${{ env.REPO_NAME }}
+          rclone copy -v --copy-links --checksum --fast-list r2:${{ secrets.R2_BUCKET }}/flatpak ${{ env.REPO_NAME }}
 
       - name: Build packages
         id: build-packages
@@ -192,8 +192,8 @@ jobs:
 
       - name: Upload repo
         run: |
-          rclone copy -v --copy-links --checksum ${{ env.REPO_NAME }} r2:${{ secrets.R2_BUCKET }}/flatpak
-          rclone copy -v --copy-links --checksum *.flatpakrepo r2:${{ secrets.R2_BUCKET }}/flatpak
+          rclone copy -v --copy-links --checksum --fast-list ${{ env.REPO_NAME }} r2:${{ secrets.R2_BUCKET }}/flatpak
+          rclone copy -v --copy-links --checksum --fast-list *.flatpakrepo r2:${{ secrets.R2_BUCKET }}/flatpak
 
       - name: Cache build
         if: always()
