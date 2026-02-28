@@ -16,4 +16,9 @@
 		</screenshot>
 	</screenshots>
 	<launchable type="desktop-id">com.google.Antigravity.desktop</launchable>
+	<releases>
+    <release version="1.19.6" date="2026-02-27">
+      <description></description>
+    </release>
+  </releases>
 </component>
