@@ -129,6 +129,7 @@ jobs:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
 
       - name: Get date
+        if: ${{ github.event.inputs.init_repo != 'true' }}
         id: date
         run: |
           echo "year=$(date +'%Y')" >> $GITHUB_OUTPUT
@@ -139,6 +140,7 @@ jobs:
           echo "second=$(date +'%S')" >> $GITHUB_OUTPUT
 
       - name: Restore cache
+        if: ${{ github.event.inputs.init_repo != 'true' }}
         uses: actions/cache/restore@v5
         with:
           path: |
