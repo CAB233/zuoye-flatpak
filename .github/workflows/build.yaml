@@ -50,6 +50,7 @@ jobs:
         id: diff
         uses: GrantBirki/git-diff-action@v2.8.1
         with:
+          base_branch: ${{ github.event.before }}
           file_output_only: true
           search_path: ${{ env.MANIFESTS_DIR }}
           json_diff_file_output: diff.json
