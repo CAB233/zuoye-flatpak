@@ -2,10 +2,10 @@ name: Build and test
 
 on:
   pull_request:
-    branches: 
+    branches:
       - stable
     paths:
-      - "manifests/**"
+      - 'manifests/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
@@ -27,10 +27,17 @@ jobs:
       apps: ${{ steps.matrix.outputs.apps }}
       has_changes: ${{ steps.matrix.outputs.has_changes }}
     steps:
+      - uses: actions/create-github-app-token@v2
+        id: generate-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_KEY }}
+
       - name: Checkout
         uses: actions/checkout@v6
         with:
-          fetch-depth: 0
+          ref: ${{ github.head_ref }}
+          token: ${{ steps.generate-token.outputs.token }}
 
       - name: Diff as json
         id: diff
