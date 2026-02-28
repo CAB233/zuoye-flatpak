@@ -69,6 +69,7 @@ jobs:
           if [ -n "${{ github.event.inputs.apps }}" ]; then
             echo "apps=${{ github.event.inputs.apps }}" >> $GITHUB_OUTPUT
             echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "$apps"
             exit 0
           fi
 
@@ -88,10 +89,10 @@ jobs:
             echo "apps=" >> $GITHUB_OUTPUT
             echo "has_changes=false" >> $GITHUB_OUTPUT
           else
-            echo "apps: $apps"
             echo "apps=$apps" >> $GITHUB_OUTPUT
             echo "has_changes=true" >> $GITHUB_OUTPUT
           fi
+          echo "$apps"
 
   build:
     runs-on: ubuntu-24.04
