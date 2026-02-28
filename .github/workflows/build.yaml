@@ -13,6 +13,11 @@ on:
         type: string
         required: false
         default: ""
+      init_repo:
+        description: "初始化仓库"
+        type: boolean
+        required: false
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
@@ -149,6 +154,7 @@ jobs:
             build-flatpak-
 
       - name: Download repo
+        if: ${{ github.event.inputs.init_repo != 'true' }}
         run: |
           rclone copy -v --copy-links --checksum r2:${{ secrets.R2_BUCKET }}/flatpak ${{ env.BUILD_DIR }}
 
