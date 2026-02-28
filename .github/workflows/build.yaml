@@ -95,22 +95,39 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Install dependencies
+      - name: Setup flatpak
         run: |
           sudo add-apt-repository -y ppa:flatpak/stable
           sudo apt-get update -y
           sudo apt-get install -y flatpak flatpak-builder
+          flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 
-      - name: Setup environment
-        run: flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+      - name: Get date
+        id: date
+        run: |
+          echo "year=$(date +'%Y')" >> $GITHUB_OUTPUT
+          echo "month=$(date +'%m')" >> $GITHUB_OUTPUT
+          echo "day=$(date +'%d')" >> $GITHUB_OUTPUT
+          echo "hour=$(date +'%H')" >> $GITHUB_OUTPUT
+          echo "minute=$(date +'%M')" >> $GITHUB_OUTPUT
+          echo "second=$(date +'%S')" >> $GITHUB_OUTPUT
 
-      - name: Cache .flatpak-builder
-        uses: actions/cache@v5
+      - name: Restore cache
+        uses: actions/cache/restore@v5
         with:
-          path: .flatpak-builder
-          key: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+          path: |
+            .flatpak-builder
+            ${{ env.REPO_NAME }}
+          key: build-flatpak-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }} ${{ steps.date.outputs.hour }}:${{ steps.date.outputs.minute }}:${{ steps.date.outputs.second }}
+          restore-keys: |
+            build-flatpak-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }} ${{ steps.date.outputs.hour }}:${{ steps.date.outputs.minute }}:
+            build-flatpak-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }} ${{ steps.date.outputs.hour }}:
+            build-flatpak-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }}
+            build-flatpak-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-
+            build-flatpak-${{ steps.date.outputs.year }}-
+            build-flatpak-
 
-      - name: Import GPG key
+      - name: Import GPG
         uses: crazy-max/ghaction-import-gpg@v6.3.0
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
@@ -146,6 +163,15 @@ jobs:
             --static-delta-ignore-ref=*.Debug \
             --gpg-sign=${{ secrets.GPG_KEY_FINGERPRINT }} \
             ${{ env.REPO_NAME }}
+
+      - name: Cache build
+        if: always()
+        uses: actions/cache/save@v5
+        with:
+          path: |
+            .flatpak-builder
+            ${{ env.REPO_NAME }}
+          key: build-flatpak-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }} ${{ steps.date.outputs.hour }}:${{ steps.date.outputs.minute }}:${{ steps.date.outputs.second }}
 
       - name: Copy .flatpakrepo
         run: cp -v *.flatpakrepo ${{ env.REPO_NAME }}
