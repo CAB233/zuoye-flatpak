@@ -102,6 +102,25 @@ jobs:
           sudo apt-get install -y flatpak flatpak-builder
           flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 
+      - name: Setup rclone
+        uses: AnimMouse/setup-rclone@v1.12.0
+        with:
+          rclone_config: |
+            [r2]
+            type = s3
+            provider = Cloudflare
+            access_key_id = ${{ secrets.R2_ACCESS_KEY_ID }}
+            secret_access_key = ${{ secrets.R2_SECRET_ACCESS_KEY }}
+            region = auto
+            endpoint = https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+            no_check_bucket = true
+          disable_base64: true
+
+      - name: Import GPG
+        uses: crazy-max/ghaction-import-gpg@v6.3.0
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+
       - name: Get date
         id: date
         run: |
@@ -127,10 +146,9 @@ jobs:
             build-flatpak-${{ steps.date.outputs.year }}-
             build-flatpak-
 
-      - name: Import GPG
-        uses: crazy-max/ghaction-import-gpg@v6.3.0
-        with:
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+      - name: Download repo
+        run: |
+          rclone copy -v --checksum r2:${{ secrets.R2_BUCKET }}/flatpak ${{ env.BUILD_DIR }}
 
       - name: Build packages
         id: build-packages
@@ -164,6 +182,11 @@ jobs:
             --gpg-sign=${{ secrets.GPG_KEY_FINGERPRINT }} \
             ${{ env.REPO_NAME }}
 
+      - name: Upload repo
+        run: |
+          rclone copy -v --checksum ${{ env.BUILD_DIR }} r2:${{ secrets.R2_BUCKET }}/flatpak
+          rclone copy -v --checksum *.flatpakrepo r2:${{ secrets.R2_BUCKET }}/flatpak
+
       - name: Cache build
         if: always()
         uses: actions/cache/save@v5
@@ -172,17 +195,3 @@ jobs:
             .flatpak-builder
             ${{ env.REPO_NAME }}
           key: build-flatpak-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }} ${{ steps.date.outputs.hour }}:${{ steps.date.outputs.minute }}:${{ steps.date.outputs.second }}
-
-      - name: Copy .flatpakrepo
-        run: cp -v *.flatpakrepo ${{ env.REPO_NAME }}
-
-      - name: Upload to R2
-        uses: ryand56/r2-upload-action@v1.4
-        with:
-          r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
-          r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
-          r2-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          r2-bucket: ${{ secrets.R2_BUCKET }}
-          source-dir: ${{ env.REPO_NAME }}
-          destination-dir: flatpak
-          keep-file-fresh: true
