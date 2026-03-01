@@ -1,9 +1,9 @@
 id: com.google.Antigravity
 runtime: org.freedesktop.Platform
-runtime-version: "25.08"
+runtime-version: '25.08'
 sdk: org.freedesktop.Sdk
 base: org.electronjs.Electron2.BaseApp
-base-version: "25.08"
+base-version: '25.08'
 command: antigravity
 tags: [proprietary]
 separate-locales: false
@@ -29,8 +29,8 @@ finish-args:
   - --talk-name=com.canonical.AppMenu.Registrar
   - --talk-name=com.canonical.AppMenu.Registrar.*
 cleanup:
-  - "*.a"
-  - "*.la"
+  - '*.a'
+  - '*.la'
   - /include
   - /lib/cmake
   - /lib/debug
@@ -90,8 +90,7 @@ modules:
           url: https://api.github.com/repos/1player/host-spawn/releases/latest
           version-query: .tag_name
           timestamp-query: .published_at
-          url-query:
-            '"https://github.com/1player/host-spawn/releases/download/" +
+          url-query: '"https://github.com/1player/host-spawn/releases/download/" +
             $version + "/host-spawn-x86_64"'
 
   - name: antigravity
@@ -110,9 +109,9 @@ modules:
         filename: antigravity.rpm
         only-arches:
           - x86_64
-        url: https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/pool/antigravity-debian/antigravity_1.19.6-1772152296_amd64_4adf927f23143e77a9a759c97e46fe6f.deb
-        sha256: 04da15e1db2b7bd9c39708d62a2a42fc4e42ceafd977aac9a638c771117a3d7b
-        size: 159904276
+        url: https://us-central1-yum.pkg.dev/projects/antigravity-auto-updater-dev/antigravity-rpm/Packages/3f0bf7f596bbe144421afa23c5d795bbca731e68b105244515253b4fd7724e54-antigravity-1.19.6-1772150780.el8.x86_64.rpm
+        sha256: 3f0bf7f596bbe144421afa23c5d795bbca731e68b105244515253b4fd7724e54
+        size: 188806520
         x-checker-data:
           type: rpm-repo
           package-name: antigravity
