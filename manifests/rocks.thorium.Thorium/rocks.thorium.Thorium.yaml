@@ -6,9 +6,8 @@ base: org.chromium.Chromium.BaseApp
 base-version: '25.08'
 command: thorium
 separate-locales: false
-build-options:
-  no-debuginfo: true
 finish-args:
+  - --require-version=1.8.2
   - --device=all
   - --share=ipc
   - --share=network
@@ -17,8 +16,8 @@ finish-args:
   - --socket=pulseaudio
   - --socket=x11
   - --socket=wayland
-  - --require-version=1.8.2
   - --system-talk-name=org.bluez
+  - --system-talk-name=org.freedesktop.Avahi
   - --system-talk-name=org.freedesktop.UPower
   - --talk-name=org.freedesktop.FileManager1
   - --talk-name=org.freedesktop.Notifications
@@ -26,28 +25,19 @@ finish-args:
   - --talk-name=org.freedesktop.secrets
   - --talk-name=org.kde.kwalletd5
   - --talk-name=org.kde.kwalletd6
-  - --talk-name=org.kde.StatusNotifierWatcher
   - --talk-name=org.gnome.SessionManager
-  - --system-talk-name=org.freedesktop.Avahi
   - --own-name=org.mpris.MediaPlayer2.chromium.*
+  - --persist=.pki
   - --filesystem=/run/.heim_org.h5l.kcm-socket
-  - --filesystem=host-etc
-  - --filesystem=xdg-run/pipewire-0
-  - --filesystem=xdg-documents
+  - --filesystem=xdg-desktop
   - --filesystem=xdg-download
-  - --filesystem=xdg-music
-  - --filesystem=xdg-videos
-  - --filesystem=xdg-pictures
-  # For GNOME proxy resolution
-  - --filesystem=xdg-run/dconf
-  - --filesystem=~/.config/dconf:ro
-  - --talk-name=ca.desrt.dconf
-  - --env=GTK_PATH=/app/lib/gtkmodules
-  - --env=DCONF_USER_CONFIG_DIR=.config/dconf
-  - --env=GIO_EXTRA_MODULES=/app/lib/gio/modules
-  - --env=GSETTINGS_BACKEND=dconf
-  # For KDE proxy resolution (KDE5 only)
-  - --filesystem=~/.config/kioslaverc
+  - --filesystem=xdg-run/dconf # For GNOME proxy resolution
+  - --filesystem=xdg-run/pipewire-0
+  - --filesystem=~/.config/dconf:ro # For GNOME proxy resolution
+  - --filesystem=~/.config/kioslaverc # For KDE proxy resolution (KDE5 only)
+  - --env=DCONF_USER_CONFIG_DIR=.config/dconf # For GNOME proxy resolution
+  - --env=GIO_EXTRA_MODULES=/app/lib/gio/modules # For GNOME proxy resolution
+  - --env=GSETTINGS_BACKEND=dconf # For GNOME proxy resolution
 cleanup:
   - '*.a'
   - '*.la'
@@ -99,13 +89,13 @@ modules:
   - name: thorium
     buildsystem: simple
     build-commands:
-      - mkdir -p "${FLATPAK_DEST}"/thorium
-      - bsdtar --no-same-owner -xf thorium.zip -C "${FLATPAK_DEST}"/thorium
-      - install -Dvm755 thorium.sh "${FLATPAK_DEST}"/bin/thorium
-      - install -Dvm644 cobalt.ini -t "${FLATPAK_DEST}"/etc
-      - install -Dvm644 rocks.thorium.Thorium.desktop -t "${FLATPAK_DEST}"/share/applications
-      - install -Dvm644 rocks.thorium.Thorium.metainfo.xml -t "${FLATPAK_DEST}"/share/metainfo
-      - install -Dvm644 "${FLATPAK_DEST}"/thorium/thorium.svg "${FLATPAK_DEST}"/share/icons/hicolor/scalable/apps/rocks.thorium.Thorium.svg
+      - mkdir -p ${FLATPAK_DEST}/thorium
+      - bsdtar --no-same-owner -xf thorium.zip -C ${FLATPAK_DEST}/thorium
+      - install -Dvm755 thorium.sh ${FLATPAK_DEST}/bin/thorium
+      - install -Dvm644 cobalt.ini -t ${FLATPAK_DEST}/etc
+      - install -Dvm644 rocks.thorium.Thorium.desktop -t ${FLATPAK_DEST}/share/applications
+      - install -Dvm644 rocks.thorium.Thorium.metainfo.xml -t ${FLATPAK_DEST}/share/metainfo
+      - install -Dvm644 ${FLATPAK_DEST}/thorium/thorium.svg ${FLATPAK_DEST}/share/icons/hicolor/scalable/apps/rocks.thorium.Thorium.svg
     cleanup:
       - /thorium/thorium.svg
       - /thorium/chrome-management-service
@@ -121,8 +111,8 @@ modules:
       - '/thorium/xdg-*'
     sources:
       - type: file
-        url: https://github.com/Alex313031/thorium/releases/download/M138.0.7204.303/thorium-browser_138.0.7204.303_SSE3.zip
-        sha256: 31362085f7a0630fc935162cae5906eb39302c8f88aca2a1aa84581e3527bc50
+        url: https://github.com/Alex313031/thorium/releases/download/M138.0.7204.303/thorium-browser_138.0.7204.303_AVX2.zip
+        sha256: 07b980b76735733a1c45b8cba340a2947aa68f9ccdc6f26511135752d4a1ca22
         dest-filename: thorium.zip
         only-arches:
           - x86_64
@@ -130,7 +120,7 @@ modules:
           type: anitya
           project-id: 373887
           stable-only: true
-          url-template: https://github.com/Alex313031/thorium/releases/download/M${version}/thorium-browser_${version}_SSE3.zip
+          url-template: https://github.com/Alex313031/thorium/releases/download/M${version}/thorium-browser_${version}_AVX2.zip
       - type: file
         path: thorium.sh
       - type: file

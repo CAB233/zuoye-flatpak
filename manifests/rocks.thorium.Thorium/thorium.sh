@@ -1,3 +1,3 @@
-#!/usr/bin/bash
+#!/bin/bash
 
-exec cobalt "$@"
+exec cobalt "$@" --no-default-browser-check
