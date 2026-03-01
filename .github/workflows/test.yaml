@@ -3,9 +3,7 @@ name: Build and test
 on:
   pull_request:
     branches:
-      - stable
-    paths:
-      - 'manifests/**'
+      - 'update-stable-**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
