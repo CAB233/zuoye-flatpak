@@ -140,6 +140,7 @@ jobs:
           echo "second=$(date +'%S')" >> $GITHUB_OUTPUT
 
       - name: Restore cache
+        id: restore-cache
         if: ${{ github.event.inputs.init_repo != 'true' }}
         uses: actions/cache/restore@v5
         with:
@@ -156,9 +157,8 @@ jobs:
             build-flatpak-
 
       - name: Download repo
-        if: ${{ github.event.inputs.init_repo != 'true' }}
-        run: |
-          rclone sync -v --copy-links --checksum --fast-list r2:${{ secrets.R2_BUCKET }}/flatpak ${{ env.REPO_NAME }}
+        if: ${{ github.event.inputs.init_repo != 'true' || steps.restore-cache.outputs.cache-hit != 'true' }}
+        run: rclone sync -v --copy-links --checksum --fast-list r2:${{ secrets.R2_BUCKET }}/flatpak ${{ env.REPO_NAME }}
 
       - name: Build packages
         run: |
