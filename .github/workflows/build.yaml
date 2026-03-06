@@ -199,7 +199,7 @@ jobs:
             --fast-list \
             --create-empty-src-dirs \
             --s3-directory-markers \
-            --exclude "{state,tmp}/"
+            --exclude "{state,tmp}/" \
             ${{ env.REPO_NAME }} r2:${{ secrets.R2_BUCKET }}/flatpak
 
           rclone sync \
