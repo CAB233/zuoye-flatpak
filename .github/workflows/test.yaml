@@ -19,23 +19,17 @@ env:
   BUILD_DIR: ${{ vars.BUILD_DIR }}
 
 jobs:
-  metadata:
+  test:
     runs-on: ubuntu-24.04
     outputs:
       apps: ${{ steps.matrix.outputs.apps }}
       has_changes: ${{ steps.matrix.outputs.has_changes }}
     steps:
-      - uses: actions/create-github-app-token@v2
-        id: generate-token
-        with:
-          app-id: ${{ secrets.APP_ID }}
-          private-key: ${{ secrets.APP_KEY }}
-
       - name: Checkout
         uses: actions/checkout@v6
         with:
           ref: ${{ github.head_ref }}
-          token: ${{ steps.generate-token.outputs.token }}
+          fetch-depth: 0
 
       - name: Diff as json
         id: diff
@@ -73,14 +67,6 @@ jobs:
             echo "has_changes=true" >> $GITHUB_OUTPUT
           fi
 
-  build:
-    runs-on: ubuntu-24.04
-    needs: metadata
-    if: needs.metadata.outputs.has_changes == 'true'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
       - name: Setup flatpak
         run: |
           sudo add-apt-repository -y ppa:flatpak/stable
@@ -90,7 +76,7 @@ jobs:
 
       - name: Build packages
         run: |
-          for app in ${{ needs.metadata.outputs.apps }}; do
+          for app in ${{ steps.matrix.outputs.apps }}; do
             manifest_file="${{ env.MANIFESTS_DIR }}/${app}/${app}.yaml"
             flatpak-builder \
               --user \
