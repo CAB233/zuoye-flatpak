@@ -53,7 +53,7 @@ jobs:
 
       - name: Diff as json
         id: diff
-        uses: GrantBirki/git-diff-action@v3.0.0
+        uses: GrantBirki/git-diff-action@v2.8.1
         with:
           base_branch: ${{ github.event.before }}
           file_output_only: true
