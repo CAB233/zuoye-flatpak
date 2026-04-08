@@ -109,9 +109,9 @@ modules:
         filename: antigravity.rpm
         only-arches:
           - x86_64
-        url: https://us-central1-yum.pkg.dev/projects/antigravity-auto-updater-dev/antigravity-rpm/Packages/fd5be4e1861dbf847fb987068f60a93581e42056143127bc88f6b4979845aca9-antigravity-1.21.9-1774758888.el8.x86_64.rpm
-        sha256: fd5be4e1861dbf847fb987068f60a93581e42056143127bc88f6b4979845aca9
-        size: 193366348
+        url: https://us-central1-yum.pkg.dev/projects/antigravity-auto-updater-dev/antigravity-rpm/Packages/c0b58e28127e7195e014fb3563fc77b26ecca9dfe3cbeff7866b6e78312a8fcf-antigravity-1.22.2-1775161846.el8.x86_64.rpm
+        sha256: c0b58e28127e7195e014fb3563fc77b26ecca9dfe3cbeff7866b6e78312a8fcf
+        size: 188948492
         x-checker-data:
           type: rpm-repo
           package-name: antigravity
