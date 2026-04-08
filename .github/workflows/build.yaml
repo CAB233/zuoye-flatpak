@@ -158,7 +158,14 @@ jobs:
 
       - name: Download repo
         if: ${{ github.event.inputs.init_repo != 'true' || steps.restore-cache.outputs.cache-hit != 'true' }}
-        run: rclone sync -v --copy-links --checksum --fast-list r2:${{ secrets.R2_BUCKET }}/flatpak ${{ env.REPO_NAME }}
+        run: |
+          rclone sync \
+            -v \
+            --copy-links \
+            --checksum \
+            --fast-list \
+            --create-empty-src-dirs \
+            r2:${{ secrets.R2_BUCKET }}/flatpak ${{ env.REPO_NAME }}
 
       - name: Build packages
         run: |
