@@ -15,6 +15,20 @@ REPO_BRANCH := "beta"
         {{ BUILD_PATH }} \
         {{ manifest }}
 
+# 构建并安装应用
+@build-and-install manifest:
+    flatpak-builder \
+        --user \
+        --ccache \
+        --force-clean \
+        --disable-updates \
+        --disable-rofiles-fuse \
+        --default-branch={{ REPO_BRANCH }} \
+        --install-deps-from=flathub \
+        --repo={{ REPO_PATH }} \
+        --install {{ BUILD_PATH }} \
+        {{ manifest }}
+
 # 导出软件包
 @bundle id:
     flatpak build-bundle {{ REPO_PATH }} "{{ id }}.flatpak" {{ id }} {{ REPO_BRANCH }}
