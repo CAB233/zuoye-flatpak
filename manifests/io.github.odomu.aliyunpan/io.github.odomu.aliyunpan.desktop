@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=阿里云盘小白羊
+Exec=alixby %U
+Terminal=false
+Type=Application
+Icon=io.github.odomu.aliyunpan
+StartupWMClass=io.github.odomu.aliyunpan
+Comment=阿里云盘小白羊
+Categories=Network;

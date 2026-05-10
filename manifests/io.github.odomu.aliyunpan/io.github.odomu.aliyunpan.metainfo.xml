@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.odomu.aliyunpan</id>
+  <name>阿里云盘小白羊</name>
+  <summary>基于原版阿里云盘小白羊v3的延续版</summary>
+  <metadata_license>MIT</metadata_license>
+  <project_license>AGPL-3.0-or-later</project_license>
+  <description>
+    <p>
+      基于原版阿里云盘小白羊v3的延续版
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.odomu.aliyunpan.desktop</launchable>
+</component>
