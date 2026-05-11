@@ -9,10 +9,12 @@ separate-locales: false
 finish-args:
   - --share=ipc
   - --share=network
+  - --socket=pulseaudio
   - --socket=wayland
   - --socket=fallback-x11
   - --device=dri
   - --filesystem=xdg-download
+  - --filesystem=xdg-run/pipewire-0
   # required to fix cursor scaling on wayland
   - --env=XCURSOR_PATH=/run/host/user-share/icons:/run/host/share/icons
   - --system-talk-name=org.freedesktop.login1
