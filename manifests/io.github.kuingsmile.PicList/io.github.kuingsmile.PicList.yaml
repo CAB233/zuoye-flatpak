@@ -1,0 +1,71 @@
+app-id: io.github.kuingsmile.PicList
+runtime: org.freedesktop.Platform
+runtime-version: '25.08'
+sdk: org.freedesktop.Sdk
+base: org.electronjs.Electron2.BaseApp
+base-version: '25.08'
+command: piclist
+separate-locales: false
+finish-args:
+  - --share=ipc
+  - --share=network
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  - --filesystem=xdg-download
+  - --filesystem=xdg-pictures
+  # required to fix cursor scaling on wayland
+  - --env=XCURSOR_PATH=/run/host/user-share/icons:/run/host/share/icons
+  - --system-talk-name=org.freedesktop.login1
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=com.canonical.AppMenu.Registrar
+  - --talk-name=com.canonical.AppMenu.Registrar.*
+cleanup:
+  - '*.a'
+  - '*.la'
+  - /include
+  - /lib/cmake
+  - /lib/debug
+  - /lib/pkgconfig
+  - /man
+  - /share/man
+  - /share/doc
+  - /share/gtk-doc
+
+modules:
+  - name: piclist
+    buildsystem: simple
+    build-commands:
+      - install -Dvm644 ${FLATPAK_ID}.png -t ${FLATPAK_DEST}/share/icons/hicolor/512x512/apps/
+      - install -Dvm644 ${FLATPAK_ID}.desktop -t ${FLATPAK_DEST}/share/applications/
+      - install -Dvm644 ${FLATPAK_ID}.metainfo.xml ${FLATPAK_DEST}/share/metainfo/${FLATPAK_ID}.metainfo.xml
+      - install -Dvm755 piclist.sh /app/bin/piclist
+      - install -Dvm755 apply_extra -t ${FLATPAK_DEST}/bin
+    sources:
+      - type: extra-data
+        filename: piclist.deb
+        only-arches:
+          - x86_64
+        url: https://github.com/Kuingsmile/PicList/releases/download/v3.3.2/PicList-3.3.2-amd64.deb
+        sha256: 403d1adc4b495f5747a493e6dbe16873b86af85a46b578678047c3a92b990286
+        size: 95045660
+        x-checker-data:
+          type: git
+          tag-pattern: ^v([\d.]+)$
+      - type: script
+        dest-filename: apply_extra
+        commands:
+          - bsdtar -xf piclist.deb
+          - bsdtar -xf data.tar.xz
+          - mv opt/PicList PicList
+          - rm -r piclist.deb control.tar.* data.tar.xz debian-binary usr/ opt/
+      - type: script
+        dest-filename: piclist.sh
+        commands:
+          - zypak-wrapper /app/extra/PicList/PicList "$@"
+      - type: file
+        path: io.github.kuingsmile.PicList.png
+      - type: file
+        path: io.github.kuingsmile.PicList.desktop
+      - type: file
+        path: io.github.kuingsmile.PicList.metainfo.xml

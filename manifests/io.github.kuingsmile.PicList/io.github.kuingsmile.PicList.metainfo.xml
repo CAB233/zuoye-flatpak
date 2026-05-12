@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.kuingsmile.PicList</id>
+  <name>PicList</name>
+  <summary>An image upload and manage tool, base on PicGo</summary>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <description>
+    <p>
+      An image upload and manage tool, base on PicGo
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.kuingsmile.PicList.desktop</launchable>
+</component>
