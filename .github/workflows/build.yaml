@@ -75,7 +75,7 @@ jobs:
 
           apps=""
           DIFF_FILE=${{ steps.diff.outputs.json-diff-path }}
-          for file in $(jq -r '.files[].path' "$DIFF_FILE"); do
+          for file in $(jq -r '.files[] | select(.type != "DeletedFile") | .path' "$DIFF_FILE"); do
             if [[ "$file" =~ ^manifests/([^/]+)/ ]]; then
               app_id="${BASH_REMATCH[1]}"
               if [[ ! " $apps " =~ " $app_id " ]]; then
