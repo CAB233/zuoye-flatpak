@@ -1,0 +1,90 @@
+name: Drop unused app
+
+on:
+  workflow_dispatch:
+    inputs:
+      apps:
+        description: '手动指定 APP ID（空格分隔）'
+        type: string
+        required: false
+        default: ''
+
+env:
+  MANIFESTS_DIR: ${{ vars.MANIFESTS_DIR }}
+  REPO_NAME: ${{ vars.REPO_NAME }}
+  BUILD_DIR: ${{ vars.BUILD_DIR }}
+
+jobs:
+  drop:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Setup flatpak and ostree
+        run: |
+          sudo add-apt-repository -y ppa:flatpak/stable
+          sudo apt-get update -y
+          sudo apt-get install -y flatpak flatpak-builder ostree
+          flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+
+      - name: Setup rclone
+        uses: AnimMouse/setup-rclone@v1.12.0
+        with:
+          rclone_config: |
+            [r2]
+            type = s3
+            provider = Cloudflare
+            access_key_id = ${{ secrets.R2_ACCESS_KEY_ID }}
+            secret_access_key = ${{ secrets.R2_SECRET_ACCESS_KEY }}
+            region = auto
+            endpoint = https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+            no_check_bucket = true
+          disable_base64: true
+          version: v1.73.1
+
+      - name: Import GPG
+        uses: crazy-max/ghaction-import-gpg@v7.0.0
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+
+      - name: Download repo
+        run: |
+          rclone sync \
+            -v \
+            --copy-links \
+            --checksum \
+            --fast-list \
+            --create-empty-src-dirs \
+            r2:${{ secrets.R2_BUCKET }}/flatpak ${{ env.REPO_NAME }}
+
+      - name: Drop packages
+        run: |
+          for app in ${{ github.event.inputs.apps }}; do
+            ostree refs --repo=${{ env.REPO_NAME }} | grep -E "(app|runtime)/${app}(/|\.)" | while read -r ref; do
+              echo "::notice::Drop App: $ref"
+              ostree refs --repo=${{ env.REPO_NAME }} --delete "$ref"
+            done
+          done
+
+      - name: Build repo
+        run: |
+          flatpak build-sign \
+            --gpg-sign=${{ secrets.GPG_KEY_FINGERPRINT }} \
+            ${{ env.REPO_NAME }}
+
+          flatpak build-update-repo \
+            --prune \
+            --generate-static-deltas \
+            --static-delta-ignore-ref="*.Debug" \
+            --gpg-sign=${{ secrets.GPG_KEY_FINGERPRINT }} \
+            ${{ env.REPO_NAME }}
+
+      - name: Upload repo
+        run: |
+          rclone sync \
+            -v \
+            --copy-links \
+            --checksum \
+            --fast-list \
+            --create-empty-src-dirs \
+            --s3-directory-markers \
+            --exclude "{state,tmp}/" \
+            ${{ env.REPO_NAME }} r2:${{ secrets.R2_BUCKET }}/flatpak
