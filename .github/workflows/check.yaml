@@ -45,8 +45,16 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.metadata.outputs.matrix) }}
     steps:
+      - uses: actions/create-github-app-token@v3.2.0
+        id: generate-token
+        with:
+          client-id: ${{ secrets.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          token: "${{ steps.generate-token.outputs.token }}"
 
       - name: Check and update
         uses: docker://ghcr.io/flathub/flatpak-external-data-checker:latest
