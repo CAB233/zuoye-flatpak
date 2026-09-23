@@ -1,9 +1,9 @@
 app-id: rocks.thorium.Thorium
 runtime: org.freedesktop.Platform
-runtime-version: '25.08'
+runtime-version: '26.08'
 sdk: org.freedesktop.Sdk
 base: org.chromium.Chromium.BaseApp
-base-version: '25.08'
+base-version: '26.08'
 command: thorium
 separate-locales: false
 finish-args:
@@ -121,8 +121,10 @@ modules:
           project-id: 373887
           stable-only: true
           url-template: https://github.com/Alex313031/thorium/releases/download/M${version}/thorium-browser_${version}_AVX2.zip
-      - type: file
-        path: thorium.sh
+      - type: script
+        dest-filename: thorium.sh
+        commands:
+          - exec cobalt "$@" --no-default-browser-check
       - type: file
         path: cobalt.ini
       - type: file
