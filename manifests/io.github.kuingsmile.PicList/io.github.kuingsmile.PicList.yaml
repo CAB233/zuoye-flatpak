@@ -51,8 +51,10 @@ modules:
         sha256: 403d1adc4b495f5747a493e6dbe16873b86af85a46b578678047c3a92b990286
         size: 95045660
         x-checker-data:
-          type: git
-          tag-pattern: ^v([\d.]+)$
+          type: json
+          url: https://api.github.com/repos/Kuingsmile/PicList/releases/latest
+          version-query: .tag_name | sub("^v"; "")
+          url-query: .assets[] | select(.name == "PicList-" + $version + "-amd64.deb") | .browser_download_url
       - type: script
         dest-filename: apply_extra
         commands:
