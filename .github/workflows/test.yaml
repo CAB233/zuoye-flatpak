@@ -20,7 +20,7 @@ env:
 
 jobs:
   test:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       apps: ${{ steps.matrix.outputs.apps }}
       has_changes: ${{ steps.matrix.outputs.has_changes }}

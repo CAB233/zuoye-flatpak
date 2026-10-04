@@ -16,7 +16,7 @@ env:
 
 jobs:
   metadata:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
     steps:
@@ -40,7 +40,7 @@ jobs:
 
   check-update:
     needs: metadata
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.metadata.outputs.matrix) }}

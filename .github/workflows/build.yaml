@@ -20,8 +20,8 @@ on:
         default: false
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
-  cancel-in-progress: true
+  group: zuoye-flatpak
+  cancel-in-progress: false
 
 # Secrets:
 # - GPG_PRIVATE_KEY: 用于签名的 GPG 私钥，直接使用原文即可
@@ -41,7 +41,7 @@ env:
 
 jobs:
   metadata:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       apps: ${{ steps.matrix.outputs.apps }}
       has_changes: ${{ steps.matrix.outputs.has_changes }}
@@ -95,7 +95,7 @@ jobs:
           echo "$apps"
 
   build:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     needs: metadata
     if: needs.metadata.outputs.has_changes == 'true'
     steps:
@@ -139,25 +139,45 @@ jobs:
           echo "minute=$(date +'%M')" >> $GITHUB_OUTPUT
           echo "second=$(date +'%S')" >> $GITHUB_OUTPUT
 
-      - name: Restore cache
-        id: restore-cache
+      - name: Restore repo cache
         if: ${{ github.event.inputs.init_repo != 'true' }}
         uses: actions/cache/restore@v5
         with:
-          path: |
-            .flatpak-builder
-            ${{ env.REPO_NAME }}
-          key: build-flatpak-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }} ${{ steps.date.outputs.hour }}:${{ steps.date.outputs.minute }}:${{ steps.date.outputs.second }}
+          path: ${{ env.REPO_NAME }}
+          key: repo-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }} ${{ steps.date.outputs.hour }}:${{ steps.date.outputs.minute }}:${{ steps.date.outputs.second }}
           restore-keys: |
-            build-flatpak-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }} ${{ steps.date.outputs.hour }}:${{ steps.date.outputs.minute }}:
-            build-flatpak-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }} ${{ steps.date.outputs.hour }}:
-            build-flatpak-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }}
-            build-flatpak-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-
-            build-flatpak-${{ steps.date.outputs.year }}-
-            build-flatpak-
+            repo-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }} ${{ steps.date.outputs.hour }}:${{ steps.date.outputs.minute }}:
+            repo-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }} ${{ steps.date.outputs.hour }}:
+            repo-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }}
+            repo-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-
+            repo-${{ steps.date.outputs.year }}-
+            repo-
+
+      - name: Restore builder cache
+        uses: actions/cache/restore@v5
+        with:
+          path: .flatpak-builder
+          key: builder-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }} ${{ steps.date.outputs.hour }}:${{ steps.date.outputs.minute }}:${{ steps.date.outputs.second }}
+          restore-keys: |
+            builder-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }} ${{ steps.date.outputs.hour }}:${{ steps.date.outputs.minute }}:
+            builder-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }} ${{ steps.date.outputs.hour }}:
+            builder-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }}
+            builder-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-
+            builder-${{ steps.date.outputs.year }}-
+            builder-
+
+      - name: Check restored repo
+        id: check-repo
+        run: |
+          if [ -f "${{ env.REPO_NAME }}/config" ] &&
+            ostree refs --repo="${{ env.REPO_NAME }}" >/dev/null 2>&1; then
+              echo "restored=true" >> "$GITHUB_OUTPUT"
+          else
+              echo "restored=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Download repo
-        if: ${{ github.event.inputs.init_repo != 'true' || steps.restore-cache.outputs.cache-hit != 'true' }}
+        if: ${{ github.event.inputs.init_repo != 'true' && steps.check-repo.outputs.restored != 'true' }}
         run: |
           rclone sync \
             -v \
@@ -192,6 +212,7 @@ jobs:
 
           flatpak build-update-repo \
             --prune \
+            --prune-depth=2 \
             --generate-static-deltas \
             --static-delta-ignore-ref="*.Debug" \
             --gpg-sign=${{ secrets.GPG_KEY_FINGERPRINT }} \
@@ -216,11 +237,15 @@ jobs:
             --fast-list \
             *.flatpakrepo r2:${{ secrets.R2_BUCKET }}/flatpak
 
-      - name: Cache build
+      - name: Save repo cache
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ env.REPO_NAME }}
+          key: repo-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }} ${{ steps.date.outputs.hour }}:${{ steps.date.outputs.minute }}:${{ steps.date.outputs.second }}
+
+      - name: Save builder cache
         if: always()
         uses: actions/cache/save@v5
         with:
-          path: |
-            .flatpak-builder
-            ${{ env.REPO_NAME }}
-          key: build-flatpak-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }} ${{ steps.date.outputs.hour }}:${{ steps.date.outputs.minute }}:${{ steps.date.outputs.second }}
+          path: .flatpak-builder
+          key: builder-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }} ${{ steps.date.outputs.hour }}:${{ steps.date.outputs.minute }}:${{ steps.date.outputs.second }}

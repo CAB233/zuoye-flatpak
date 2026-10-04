@@ -5,6 +5,7 @@ REPO_BRANCH := "beta"
 # 构建应用
 @build manifest:
     flatpak-builder \
+        --user \
         --ccache \
         --force-clean \
         --disable-updates \

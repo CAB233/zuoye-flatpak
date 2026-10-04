@@ -9,6 +9,10 @@ on:
         required: false
         default: ''
 
+concurrency:
+  group: zuoye-flatpak
+  cancel-in-progress: false
+
 env:
   MANIFESTS_DIR: ${{ vars.MANIFESTS_DIR }}
   REPO_NAME: ${{ vars.REPO_NAME }}
@@ -16,7 +20,7 @@ env:
 
 jobs:
   drop:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - name: Setup flatpak and ostree
         run: |
@@ -45,7 +49,31 @@ jobs:
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
 
+      - name: Restore repo cache
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ env.REPO_NAME }}
+          key: repo-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }} ${{ steps.date.outputs.hour }}:${{ steps.date.outputs.minute }}:${{ steps.date.outputs.second }}
+          restore-keys: |
+            repo-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }} ${{ steps.date.outputs.hour }}:${{ steps.date.outputs.minute }}:
+            repo-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }} ${{ steps.date.outputs.hour }}:
+            repo-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }}
+            repo-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-
+            repo-${{ steps.date.outputs.year }}-
+            repo-
+
+      - name: Check restored repo
+        id: check-repo
+        run: |
+          if [ -f "${{ env.REPO_NAME }}/config" ] &&
+            ostree refs --repo="${{ env.REPO_NAME }}" >/dev/null 2>&1; then
+              echo "restored=true" >> "$GITHUB_OUTPUT"
+          else
+              echo "restored=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Download repo
+        if: ${{ steps.check-repo.outputs.restored != 'true' }}
         run: |
           rclone sync \
             -v \
@@ -88,3 +116,9 @@ jobs:
             --s3-directory-markers \
             --exclude "{state,tmp}/" \
             ${{ env.REPO_NAME }} r2:${{ secrets.R2_BUCKET }}/flatpak
+
+      - name: Save repo cache
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ env.REPO_NAME }}
+          key: repo-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }} ${{ steps.date.outputs.hour }}:${{ steps.date.outputs.minute }}:${{ steps.date.outputs.second }}
