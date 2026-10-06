@@ -1,0 +1,26 @@
+remote_name: zuoye-flatpak
+pages_url: https://repo.zuoye.win/flatpak
+repo_title: "Zuoye's Flatpak Repo"
+repo_homepage: https://github.com/CAB233/zuoye-flatpak
+
+defaults:
+  run_linter: false
+
+apps:
+  - id: io.github.odomu.aliyunpan
+    manifest: manifests/io.github.odomu.aliyunpan/io.github.odomu.aliyunpan.yaml
+    branch: stable
+    arches:
+      - x86_64
+
+  - id: io.github.kuingsmile.PicList
+    manifest: manifests/io.github.kuingsmile.PicList/io.github.kuingsmile.PicList.yaml
+    branch: stable
+    arches:
+      - x86_64
+
+  - id: rocks.thorium.Thorium
+    manifest: manifests/rocks.thorium.Thorium/rocks.thorium.Thorium.yaml
+    branch: stable
+    arches:
+      - x86_64
