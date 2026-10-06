@@ -5,111 +5,92 @@ on:
     branches:
       - stable
     paths:
-      - 'manifests/**'
+      - "manifests/**"
+      - "aetherpak.yaml"
+      - ".github/workflows/build.yaml"
   workflow_dispatch:
     inputs:
-      apps:
-        description: '手动指定 APP ID（空格分隔）'
+      app:
+        description: "Rebuild only this app ID (leave blank to use change detection)"
         type: string
         required: false
-        default: ''
-      init_repo:
-        description: '初始化仓库'
+        default: ""
+      force-all:
+        description: "Rebuild every app"
         type: boolean
         required: false
         default: false
+      reconcile-only:
+        description: "Only reconcile the OCI index against GHCR"
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+  packages: write
 
 concurrency:
   group: zuoye-flatpak
   cancel-in-progress: false
 
-# Secrets:
-# - GPG_PRIVATE_KEY: 用于签名的 GPG 私钥，直接使用原文即可
-# - GPG_KEY_FINGERPRINT: GPG 私钥的 ID，长的短的都可以，例如：99F583599B7E31F1
-# - R2_ACCOUNT_ID: 顾名思义
-# - R2_ACCESS_KEY_ID: 顾名思义
-# - R2_SECRET_ACCESS_KEY: 顾名思义
-# - R2_BUCKET: 顾名思义
-# Variables:
-# - MANIFESTS_DIR: manifest 存储根目录
-# - REPO_NAME: --repo=$REPO_NAME，需要上传的仓库元数据文件夹
-# - BUILD_DIR: 构建目录
-env:
-  MANIFESTS_DIR: ${{ vars.MANIFESTS_DIR }}
-  REPO_NAME: ${{ vars.REPO_NAME }}
-  BUILD_DIR: ${{ vars.BUILD_DIR }}
-
 jobs:
-  metadata:
+  publish:
+    uses: aetherpak/actions/.github/workflows/publish.yml@v3
+    with:
+      config: aetherpak.yaml
+      app: ${{ inputs.app }}
+      force-all: ${{ inputs.force-all }}
+      reconcile-only: ${{ inputs.reconcile-only }}
+      workflow-path: .github/workflows/build.yaml
+      branch: stable
+      remote-name: zuoye-flatpak
+      pages-url: https://repo.zuoye.win/flatpak
+      landing-page: false
+      deploy: false
+      artifact-name: zuoye-flatpak
+      signing: gpg
+    secrets:
+      gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+
+  upload-repo:
+    name: Publish repository metadata to R2
+    needs: publish
     runs-on: ubuntu-26.04
-    outputs:
-      apps: ${{ steps.matrix.outputs.apps }}
-      has_changes: ${{ steps.matrix.outputs.has_changes }}
+    permissions:
+      actions: read
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Diff as json
-        id: diff
-        uses: GrantBirki/git-diff-action@v3.0.0
-        with:
-          base_branch: ${{ github.event.before }}
-          file_output_only: true
-          search_path: ${{ env.MANIFESTS_DIR }}
-          json_diff_file_output: diff.json
-
-      - name: Print json diff
-        run: cat ${{ steps.diff.outputs.json-diff-path }}
-
-      - name: Generate Matrix
-        id: matrix
+      - name: Find repository artifact
+        id: artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          if [ -n "${{ github.event.inputs.apps }}" ]; then
-            echo "apps=${{ github.event.inputs.apps }}" >> $GITHUB_OUTPUT
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            echo "$apps"
-            exit 0
+          artifact_id=$(gh api --paginate \
+            "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts" \
+            --jq '.artifacts[] | select(.name == "zuoye-flatpak" and .expired == false) | .id')
+          echo "id=$artifact_id" >> "$GITHUB_OUTPUT"
+          if [ -z "$artifact_id" ]; then
+            echo "::notice::AetherPak did not publish repository metadata for this run."
           fi
 
-          apps=""
-          DIFF_FILE=${{ steps.diff.outputs.json-diff-path }}
-          for file in $(jq -r '.files[] | select(.type != "DeletedFile") | .path' "$DIFF_FILE"); do
-            if [[ "$file" =~ ^manifests/([^/]+)/ ]]; then
-              app_id="${BASH_REMATCH[1]}"
-              if [[ ! " $apps " =~ " $app_id " ]]; then
-                apps="$apps $app_id"
-              fi
-            fi
-          done
-          apps=$(echo "$apps" | xargs)
+      - name: Download repository metadata
+        if: steps.artifact.outputs.id != ''
+        uses: actions/download-artifact@v8
+        with:
+          name: aetherpak-repo
+          path: _site
 
-          if [ -z "$apps" ]; then
-            echo "apps=" >> $GITHUB_OUTPUT
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-          else
-            echo "apps=$apps" >> $GITHUB_OUTPUT
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-          fi
-          echo "$apps"
-
-  build:
-    runs-on: ubuntu-26.04
-    needs: metadata
-    if: needs.metadata.outputs.has_changes == 'true'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup flatpak
+      - name: Preserve repository entry point
+        if: steps.artifact.outputs.id != ''
         run: |
-          sudo add-apt-repository -y ppa:flatpak/stable
-          sudo apt-get update -y
-          sudo apt-get install -y flatpak flatpak-builder
-          flatpak remote-add --if-not-exists --user flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          test -s _site/index/static
+          test -s _site/sigs/key.asc
+          test -s _site/zuoye-flatpak.flatpakrepo
+          test ! -e _site/index.html
+          cp _site/zuoye-flatpak.flatpakrepo _site/zuoye.flatpakrepo
 
       - name: Setup rclone
+        if: steps.artifact.outputs.id != ''
         uses: AnimMouse/setup-rclone@v1.12.0
         with:
           rclone_config: |
@@ -124,128 +105,21 @@ jobs:
           disable_base64: true
           version: v1.73.1
 
-      - name: Import GPG
-        uses: crazy-max/ghaction-import-gpg@v7.0.0
-        with:
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-
-      - name: Get date
-        id: date
+      - name: Upload repository metadata
+        if: steps.artifact.outputs.id != ''
         run: |
-          echo "year=$(date +'%Y')" >> $GITHUB_OUTPUT
-          echo "month=$(date +'%m')" >> $GITHUB_OUTPUT
-          echo "day=$(date +'%d')" >> $GITHUB_OUTPUT
-          echo "hour=$(date +'%H')" >> $GITHUB_OUTPUT
-          echo "minute=$(date +'%M')" >> $GITHUB_OUTPUT
-          echo "second=$(date +'%S')" >> $GITHUB_OUTPUT
-
-      - name: Restore repo cache
-        if: ${{ github.event.inputs.init_repo != 'true' }}
-        uses: actions/cache/restore@v5
-        with:
-          path: ${{ env.REPO_NAME }}
-          key: repo-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }} ${{ steps.date.outputs.hour }}:${{ steps.date.outputs.minute }}:${{ steps.date.outputs.second }}
-          restore-keys: |
-            repo-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }} ${{ steps.date.outputs.hour }}:${{ steps.date.outputs.minute }}:
-            repo-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }} ${{ steps.date.outputs.hour }}:
-            repo-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }}
-            repo-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-
-            repo-${{ steps.date.outputs.year }}-
-            repo-
-
-      - name: Restore builder cache
-        uses: actions/cache/restore@v5
-        with:
-          path: .flatpak-builder
-          key: builder-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }} ${{ steps.date.outputs.hour }}:${{ steps.date.outputs.minute }}:${{ steps.date.outputs.second }}
-          restore-keys: |
-            builder-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }} ${{ steps.date.outputs.hour }}:${{ steps.date.outputs.minute }}:
-            builder-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }} ${{ steps.date.outputs.hour }}:
-            builder-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }}
-            builder-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-
-            builder-${{ steps.date.outputs.year }}-
-            builder-
-
-      - name: Check restored repo
-        id: check-repo
-        run: |
-          if [ -f "${{ env.REPO_NAME }}/config" ] &&
-            ostree refs --repo="${{ env.REPO_NAME }}" >/dev/null 2>&1; then
-              echo "restored=true" >> "$GITHUB_OUTPUT"
-          else
-              echo "restored=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Download repo
-        if: ${{ github.event.inputs.init_repo != 'true' && steps.check-repo.outputs.restored != 'true' }}
-        run: |
-          rclone sync \
-            -v \
-            --copy-links \
+          rclone copy \
             --checksum \
             --fast-list \
-            --create-empty-src-dirs \
-            r2:${{ secrets.R2_BUCKET }}/flatpak ${{ env.REPO_NAME }}
+            --exclude 'index/static' \
+            --exclude '*.flatpakrepo' \
+            _site "r2:${{ secrets.R2_BUCKET }}/flatpak"
 
-      - name: Build packages
-        run: |
-          for app in ${{ needs.metadata.outputs.apps }}; do
-            manifest_file="${{ env.MANIFESTS_DIR }}/${app}/${app}.yaml"
-            flatpak-builder \
-              --user \
-              --force-clean \
-              --disable-updates \
-              --disable-rofiles-fuse \
-              --default-branch=stable \
-              --install-deps-from=flathub \
-              --repo=${{ env.REPO_NAME }} \
-              --gpg-sign=${{ secrets.GPG_KEY_FINGERPRINT }} \
-              ${{ env.BUILD_DIR }} \
-              "$manifest_file"
-          done
+          rclone copyto \
+            --checksum _site/index/static \
+            "r2:${{ secrets.R2_BUCKET }}/flatpak/index/static"
 
-      - name: Build repo
-        run: |
-          flatpak build-sign \
-            --gpg-sign=${{ secrets.GPG_KEY_FINGERPRINT }} \
-            ${{ env.REPO_NAME }}
-
-          flatpak build-update-repo \
-            --prune \
-            --prune-depth=2 \
-            --generate-static-deltas \
-            --static-delta-ignore-ref="*.Debug" \
-            --gpg-sign=${{ secrets.GPG_KEY_FINGERPRINT }} \
-            ${{ env.REPO_NAME }}
-
-      - name: Upload repo
-        run: |
-          rclone sync \
-            -v \
-            --copy-links \
+          rclone copy \
             --checksum \
-            --fast-list \
-            --create-empty-src-dirs \
-            --s3-directory-markers \
-            --exclude "{state,tmp}/" \
-            ${{ env.REPO_NAME }} r2:${{ secrets.R2_BUCKET }}/flatpak
-
-          rclone sync \
-            -v \
-            --copy-links \
-            --checksum \
-            --fast-list \
-            *.flatpakrepo r2:${{ secrets.R2_BUCKET }}/flatpak
-
-      - name: Save repo cache
-        uses: actions/cache/save@v5
-        with:
-          path: ${{ env.REPO_NAME }}
-          key: repo-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }} ${{ steps.date.outputs.hour }}:${{ steps.date.outputs.minute }}:${{ steps.date.outputs.second }}
-
-      - name: Save builder cache
-        if: always()
-        uses: actions/cache/save@v5
-        with:
-          path: .flatpak-builder
-          key: builder-${{ steps.date.outputs.year }}-${{ steps.date.outputs.month }}-${{ steps.date.outputs.day }} ${{ steps.date.outputs.hour }}:${{ steps.date.outputs.minute }}:${{ steps.date.outputs.second }}
+            --include '*.flatpakrepo' _site \
+            "r2:${{ secrets.R2_BUCKET }}/flatpak"
