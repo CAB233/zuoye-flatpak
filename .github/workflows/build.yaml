@@ -44,8 +44,9 @@ jobs:
     with:
       config: aetherpak.yaml
       app: ${{ inputs.app || '' }}
-      force-all: ${{ inputs.force-all }}
-      reconcile-only: ${{ inputs.reconcile-only }}
+      force-all: ${{ inputs.force-all || false }}
+      reconcile-only: ${{ inputs.reconcile-only || false }}
+      dry-run: ${{ inputs.dry-run || false }}
       workflow-path: .github/workflows/build.yaml
       branch: stable
       remote-name: zuoye-flatpak
