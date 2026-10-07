@@ -25,6 +25,10 @@ on:
         type: boolean
         required: false
         default: false
+      dry-run:
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
