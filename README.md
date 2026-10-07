@@ -9,10 +9,12 @@
 ### 添加仓库
 
 ```bash
-flatpak remote-add --if-not-exists --user \
+flatpak remote-add \
+  --user \
+  --if-not-exists \
   --signature-lookaside=https://repo.zuoye.win/flatpak/sigs \
   zuoye-flatpak \
-  https://repo.zuoye.win/flatpak/zuoye.flatpakrepo
+  https://repo.zuoye.win/flatpak/zuoye-flatpak.flatpakrepo
 ```
 
 ### 移除仓库
