@@ -65,66 +65,19 @@ jobs:
     permissions:
       actions: read
     steps:
-      - name: Find repository artifact
-        id: artifact
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          artifact_id=$(gh api --paginate \
-            "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts" \
-            --jq '.artifacts[] | select(.name == "zuoye-flatpak" and .expired == false) | .id')
-          echo "id=$artifact_id" >> "$GITHUB_OUTPUT"
-          if [ -z "$artifact_id" ]; then
-            echo "::notice::AetherPak did not publish repository metadata for this run."
-          fi
-
       - name: Download repository metadata
-        if: steps.artifact.outputs.id != ''
         uses: actions/download-artifact@v8
         with:
-          name: aetherpak-repo
+          name: zuoye-flatpak
           path: _site
 
-      - name: Preserve repository entry point
-        if: steps.artifact.outputs.id != ''
-        run: |
-          test -s _site/index/static
-          test -s _site/sigs/key.asc
-          test -s _site/zuoye-flatpak.flatpakrepo
-          test ! -e _site/index.html
-          cp _site/zuoye-flatpak.flatpakrepo _site/zuoye.flatpakrepo
-
-      - name: Setup rclone
-        if: steps.artifact.outputs.id != ''
-        uses: AnimMouse/setup-rclone@v1.12.0
-        with:
-          rclone_config: |
-            [r2]
-            type = s3
-            provider = Cloudflare
-            access_key_id = ${{ secrets.R2_ACCESS_KEY_ID }}
-            secret_access_key = ${{ secrets.R2_SECRET_ACCESS_KEY }}
-            region = auto
-            endpoint = https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
-            no_check_bucket = true
-          disable_base64: true
-          version: v1.73.1
-
       - name: Upload repository metadata
-        if: steps.artifact.outputs.id != ''
-        run: |
-          rclone copy \
-            --checksum \
-            --fast-list \
-            --exclude 'index/static' \
-            --exclude '*.flatpakrepo' \
-            _site "r2:${{ secrets.R2_BUCKET }}/flatpak"
-
-          rclone copyto \
-            --checksum _site/index/static \
-            "r2:${{ secrets.R2_BUCKET }}/flatpak/index/static"
-
-          rclone copy \
-            --checksum \
-            --include '*.flatpakrepo' _site \
-            "r2:${{ secrets.R2_BUCKET }}/flatpak"
+        uses: ryand56/r2-upload-action@v1.5
+        with:
+          r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
+          r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
+          r2-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          r2-bucket: ${{ secrets.R2_BUCKET }}
+          source-dir: _site
+          destination-dir: flatpak
+          keep-file-fresh: true
