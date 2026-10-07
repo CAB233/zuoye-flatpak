@@ -39,7 +39,7 @@ jobs:
     uses: aetherpak/actions/.github/workflows/publish.yml@v3
     with:
       config: aetherpak.yaml
-      app: ${{ inputs.app }}
+      app: ${{ inputs.app || '' }}
       force-all: ${{ inputs.force-all }}
       reconcile-only: ${{ inputs.reconcile-only }}
       workflow-path: .github/workflows/build.yaml
