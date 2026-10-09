@@ -40,38 +40,102 @@ concurrency:
 
 jobs:
   publish:
-    uses: aetherpak/actions/.github/workflows/publish.yml@v3
-    with:
-      config: aetherpak.yaml
-      app: ${{ inputs.app || '' }}
-      force-all: ${{ inputs.force-all || false }}
-      reconcile-only: ${{ inputs.reconcile-only || false }}
-      dry-run: ${{ inputs.dry-run || false }}
-      workflow-path: .github/workflows/build.yaml
-      branch: stable
-      remote-name: zuoye-flatpak
-      pages-url: https://repo.zuoye.win/flatpak
-      landing-page: false
-      deploy: false
-      artifact-name: zuoye-flatpak
-      signing: gpg
-    secrets:
-      gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
-
-  upload-repo:
-    name: Publish repository metadata to R2
-    needs: publish
+    name: Build and publish repository
     runs-on: ubuntu-26.04
-    permissions:
-      actions: read
+    container:
+      image: ghcr.io/aetherpak/cli:v0.33.3-builder
+      options: --privileged
     steps:
-      - name: Download repository metadata
-        uses: actions/download-artifact@v8
+      - name: Checkout
+        uses: actions/checkout@v7
         with:
-          name: zuoye-flatpak
-          path: _site
+          fetch-depth: 0
+
+      - name: Plan changed apps
+        id: plan
+        if: ${{ !inputs.reconcile-only }}
+        uses: aetherpak/actions/plan@v3
+        with:
+          config: aetherpak.yaml
+          force: ${{ inputs.force-all && 'all' || inputs.app || '' }}
+          base-sha: ${{ github.event.before || '' }}
+          workflow-path: .github/workflows/build.yaml
+          branch: stable
+          cli-version: v0.33.3
+
+      - name: Cache build state
+        if: ${{ !inputs.reconcile-only && steps.plan.outputs.count != '0' }}
+        uses: actions/cache@v6
+        with:
+          path: |
+            .state/state-*
+            .ccache
+          key: flatpak-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('aetherpak.yaml', 'manifests/**') }}
+          restore-keys: |
+            flatpak-${{ runner.os }}-${{ runner.arch }}-
+
+      # Share records directly so each app and Debug extension keeps its own cell.
+      - name: Build and push changed apps
+        if: ${{ !inputs.reconcile-only && steps.plan.outputs.count != '0' }}
+        env:
+          MATRIX: ${{ steps.plan.outputs.matrix }}
+          DRY_RUN: ${{ inputs.dry-run || false }}
+          OCI_USERNAME: ${{ github.actor }}
+          OCI_PASSWORD: ${{ github.token }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          if [ "$DRY_RUN" != "true" ]; then
+            : "${GPG_PRIVATE_KEY:?GPG_PRIVATE_KEY is required for publishing}"
+            key_file=$(mktemp)
+            trap 'rm -f "$key_file"' EXIT
+            printf '%s' "$GPG_PRIVATE_KEY" > "$key_file"
+          fi
+
+          cells=$(jq -r '.[] | [."app-id", .arch, .branch, (."run-linter" // false)] | @tsv' <<< "$MATRIX")
+          while IFS=$'\t' read -r app_id arch branch run_linter; do
+            echo "::group::Build $app_id ($arch)"
+            aetherpak build \
+              --config aetherpak.yaml \
+              --app-id "$app_id" \
+              --arch "$arch" \
+              --branch "$branch" \
+              --repo-path _repo \
+              --run-linter="$run_linter"
+            echo "::endgroup::"
+
+            if [ "$DRY_RUN" != "true" ]; then
+              echo "::group::Publish $app_id ($arch)"
+              aetherpak push-oci \
+                --config aetherpak.yaml \
+                --app-id "$app_id" \
+                --arch "$arch" \
+                --branch "$branch" \
+                --repo-path _repo \
+                --registry ghcr.io \
+                --oci-repository "${GITHUB_REPOSITORY,,}" \
+                --records-dir _records \
+                --gpg-key "$key_file"
+              echo "::endgroup::"
+            fi
+          done <<< "$cells"
+
+      - name: Build repository site
+        if: ${{ !inputs.dry-run && (inputs.reconcile-only || steps.plan.outputs.count != '0') }}
+        uses: aetherpak/actions/publish-site@v3
+        with:
+          config: aetherpak.yaml
+          records-dir: _records
+          pages-url: https://repo.zuoye.win/flatpak
+          remote-name: zuoye-flatpak
+          oci-repository: ${{ github.repository }}
+          landing-page: false
+          signing: gpg
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          upload-pages-artifact: false
+          cli-version: v0.33.3
 
       - name: Upload repository metadata
+        if: ${{ !inputs.dry-run && (inputs.reconcile-only || steps.plan.outputs.count != '0') }}
         uses: ryand56/r2-upload-action@v1.5
         with:
           r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
