@@ -16,6 +16,10 @@ finish-args:
   - --filesystem=xdg-download
   - --persist=mCloud
   - --env=XCURSOR_PATH=/run/host/user-share/icons:/run/host/share/icons
+  - --talk-name=org.kde.StatusNotifierWatcher # legacy tray support
+  - --talk-name=org.freedesktop.Notifications # legacy tray support
+  - --own-name=org.kde.StatusNotifierItem-2-1 # legacy tray support
+  - --own-name=org.kde.StatusNotifierItem-3-1 # legacy tray support
 
 modules:
   # 内置 Qt5 与 ICU63，但实际其 Qt5 依赖 ICU 66
