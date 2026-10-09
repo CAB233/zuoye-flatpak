@@ -24,3 +24,9 @@ apps:
     branch: stable
     arches:
       - x86_64
+
+  - id: com.cmic.mcloud
+    manifest: manifests/com.cmic.mcloud/com.cmic.mcloud.yaml
+    branch: stable
+    arches:
+      - x86_64

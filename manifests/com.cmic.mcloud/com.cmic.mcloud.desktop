@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=mCloud
+Name[zh_CN]=中国移动云盘
+Exec=mcloud %U
+Terminal=false
+Type=Application
+Icon=com.cmic.mcloud
+StartupWMClass=com.cmic.mcloud
+Comment=mCloud
+Comment[zh_CN]=中国移动云盘
+Categories=Network;

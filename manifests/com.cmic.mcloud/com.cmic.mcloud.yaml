@@ -1,0 +1,113 @@
+app-id: com.cmic.mcloud
+runtime: org.freedesktop.Platform
+runtime-version: '26.08'
+sdk: org.freedesktop.Sdk
+base: org.electronjs.Electron2.BaseApp
+base-version: '26.08'
+command: mcloud
+separate-locales: false
+
+finish-args:
+  - --share=ipc
+  - --share=network
+  - --socket=x11
+  - --socket=pulseaudio
+  - --device=dri
+  - --filesystem=xdg-download
+  - --persist=mCloud
+  - --env=XCURSOR_PATH=/run/host/user-share/icons:/run/host/share/icons
+
+modules:
+  # 内置 Qt5 与 ICU63，但实际其 Qt5 依赖 ICU 66
+  - name: icu66
+    only-arches:
+      - x86_64
+    buildsystem: autotools
+    subdir: source
+    config-opts:
+      - --disable-static
+      - --disable-tests
+      - --disable-samples
+      - --disable-extras
+      - --disable-icuio
+    cleanup:
+      - /bin
+      - /include
+      - /lib/icu
+      - /lib/pkgconfig
+      - /share/icu
+      - '*.la'
+    sources:
+      - type: archive
+        url: https://github.com/unicode-org/icu/releases/download/release-66-1/icu4c-66_1-src.tgz
+        sha256: 52a3f2209ab95559c1cf0a14f24338001f389615bf00e2585ef3dbc43ecf0a2e
+
+  - name: mcloud
+    only-arches:
+      - x86_64
+    buildsystem: simple
+    build-commands:
+      - install -Dvm644 ${FLATPAK_ID}.png -t ${FLATPAK_DEST}/share/icons/hicolor/256x256/apps
+      - install -Dvm644 ${FLATPAK_ID}.desktop -t ${FLATPAK_DEST}/share/applications
+      - install -Dvm644 ${FLATPAK_ID}.metainfo.xml -t ${FLATPAK_DEST}/share/metainfo
+      - install -Dvm755 apply_extra ${FLATPAK_DEST}/bin/apply_extra
+      - install -Dvm755 mcloud.sh ${FLATPAK_DEST}/bin/mcloud
+    sources:
+      - type: extra-data
+        filename: mcloud.deb
+        only-arches:
+          - x86_64
+        url: https://yun.mcloud.139.com/mCloudPc/kylinV111/com.cmic.mcloud_1.1.1_amd64.deb
+        sha256: 0e28a7fe6125e32c06e27c3b7645acb3bf1e90decadc36327bbb79916aa6f4b0
+        size: 165376280
+
+      - type: script
+        dest-filename: apply_extra
+        commands:
+          - bsdtar -xf mcloud.deb
+          - bsdtar -xf data.tar.xz
+          - mv opt/apps/com.cmic.mcloud mcloud
+          - find ./ -type d -exec chmod 755 {} \;
+          - |
+            # 解包临时文件和 Debian 安装目录。
+            rm -rv -- \
+              mcloud.deb \
+              control.tar.* \
+              data.tar.* \
+              debian-binary \
+              opt/ \
+              usr/
+
+            # 冗余的 Node.js 依赖和 zip-7z 文件。
+            rm -rv -- \
+              mcloud/resources/app.asar.unpacked/node_modules/phantomjs-prebuilt \
+              mcloud/resources/app.asar.unpacked/node_modules/zip-7z/bin \
+              mcloud/resources/app.asar.unpacked/node_modules/zip-7z/src
+
+            # 其他平台的资源和 Windows 插件。
+            rm -rv -- \
+              mcloud/resources/app.asar.unpacked/resources/icons_mac/ \
+              mcloud/resources/app.asar.unpacked/resources/uos* \
+              mcloud/plugins/gmssl.dll
+
+            # ICU 由 icu66 模块提供，清理 deb 内附的旧版本。
+            rm -rv -- mcloud/processes/libicu*.so*
+
+      - type: script
+        dest-filename: mcloud.sh
+        commands:
+          - ulimit -c 0
+          - export LD_LIBRARY_PATH="/app/extra/mcloud/plugins:/app/extra/mcloud/processes:/app/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+          - export QT_QPA_PLATFORM_PLUGIN_PATH=/app/extra/mcloud/processes
+          - |
+            if [ "${MCLOUD_DEBUG:-0}" != 1 ]; then
+              exec >/dev/null 2>&1
+            fi
+          - exec zypak-wrapper /app/extra/mcloud/mcloud "$@"
+
+      - type: file
+        path: com.cmic.mcloud.png
+      - type: file
+        path: com.cmic.mcloud.desktop
+      - type: file
+        path: com.cmic.mcloud.metainfo.xml

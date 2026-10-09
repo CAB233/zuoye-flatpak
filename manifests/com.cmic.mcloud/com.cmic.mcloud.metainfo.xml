@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.cmic.mcloud</id>
+  <name>中国移动云盘</name>
+  <summary>中国移动推出的面向所有用户的云盘</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>LicenseRef-proprietary=https://caiyun.feixin.10086.cn:7071/portal/templateView/initve.html?id=143&amp;marketName=hcy_yhxy</project_license>
+  <description>
+    <p>
+      中国移动云盘（简称&quot;移动云盘&quot;原&quot;和彩云&quot;），是中国移动面向所有用户推出的一款安全、智能、不限速、移动用户免流量的产品。产品涵盖存储备份、多端同步、在线管理、群组分享四大核心能力。
+    </p>
+  </description>
+  <launchable type="desktop-id">com.cmic.mcloud.desktop</launchable>
+  <releases>
+    <release version="1.1.1" date="2026-05-20">
+      <description></description>
+    </release>
+  </releases>
+</component>
