@@ -97,6 +97,23 @@ modules:
             # ICU 由 icu66 模块提供，清理 deb 内附的旧版本。
             rm -rv -- mcloud/processes/libicu*.so*
 
+          - |
+            # 麒麟版 1.1.1：日志资源由 log4cpp 的 Category 负责回收，
+            # 桥接库析构时再次清理会访问已释放的 Category / Appender。
+            # 更新上游版本时需重新核对该补丁；哈希不匹配则停止安装。
+            log_bridge=mcloud/processes/liblog4cppbridge.so
+            printf '%s  %s\n' \
+              '2d889c27461025930caa3f24e10245181fe0fdef8bddd837ad1250ee69aa50f2' \
+              "$log_bridge" | sha256sum --check --status || {
+                echo 'Unsupported liblog4cppbridge.so: review the mCloud exit patch.' >&2
+                exit 1
+              }
+
+            # x86_64，偏移 0x3f54：CALL shutdown() 改为 JMP 0x3f68，
+            # 跳过日志资源清理，继续执行桥接库自身字符串成员的析构。
+            printf '\353\022\220\220\220' |
+              dd of="$log_bridge" bs=1 seek=$((0x3f54)) conv=notrunc status=none
+
       - type: script
         dest-filename: mcloud.sh
         commands:
