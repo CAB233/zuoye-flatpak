@@ -180,6 +180,10 @@ jobs:
           upload-pages-artifact: false
           cli-version: v0.33.3
 
+      - name: Install rclone download dependencies
+        run: |
+          microdnf install -y --setopt=install_weak_deps=0 --nodocs wget unzip
+
       - name: Setup rclone
         uses: AnimMouse/setup-rclone@v1.12.0
         with:
