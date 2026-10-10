@@ -39,12 +39,14 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  publish:
-    name: Build and publish repository
+  plan:
+    name: Plan build matrix
     runs-on: ubuntu-26.04
     container:
-      image: ghcr.io/aetherpak/cli:v0.33.3-builder
-      options: --privileged
+      image: ghcr.io/aetherpak/cli:v0.33.3
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix || '[]' }}
+      count: ${{ steps.plan.outputs.count || '0' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -63,64 +65,108 @@ jobs:
           branch: stable
           cli-version: v0.33.3
 
+  build:
+    name: Build ${{ matrix.app-id }} (${{ matrix.arch }})
+    needs: plan
+    if: ${{ !inputs.reconcile-only && needs.plan.outputs.count != '0' }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    container:
+      image: ghcr.io/aetherpak/cli:v0.33.3-builder
+      options: --privileged
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
       - name: Cache build state
-        if: ${{ !inputs.reconcile-only && steps.plan.outputs.count != '0' }}
         uses: actions/cache@v6
         with:
           path: |
             .state/state-*
             .ccache
-          key: flatpak-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('aetherpak.yaml', 'manifests/**') }}
+          key: flatpak-${{ runner.os }}-${{ matrix.app-id }}-${{ matrix.arch }}-${{ matrix.branch }}-${{ hashFiles('aetherpak.yaml', format('manifests/{0}/**', matrix.app-id)) }}
           restore-keys: |
-            flatpak-${{ runner.os }}-${{ runner.arch }}-
+            flatpak-${{ runner.os }}-${{ matrix.app-id }}-${{ matrix.arch }}-${{ matrix.branch }}-
 
-      # Share records directly so each app and Debug extension keeps its own cell.
-      - name: Build and push changed apps
-        if: ${{ !inputs.reconcile-only && steps.plan.outputs.count != '0' }}
+      - name: Build package
         env:
-          MATRIX: ${{ steps.plan.outputs.matrix }}
-          DRY_RUN: ${{ inputs.dry-run || false }}
+          APP_ID: ${{ matrix.app-id }}
+          ARCH: ${{ matrix.arch }}
+          BRANCH: ${{ matrix.branch }}
+          RUN_LINTER: ${{ matrix.run-linter || false }}
+        run: |
+          aetherpak build \
+            --config aetherpak.yaml \
+            --app-id "$APP_ID" \
+            --arch "$ARCH" \
+            --branch "$BRANCH" \
+            --repo-path _repo \
+            --run-linter="$RUN_LINTER"
+
+      - name: Push package
+        if: ${{ !inputs.dry-run }}
+        env:
+          APP_ID: ${{ matrix.app-id }}
+          ARCH: ${{ matrix.arch }}
+          BRANCH: ${{ matrix.branch }}
           OCI_USERNAME: ${{ github.actor }}
           OCI_PASSWORD: ${{ github.token }}
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
         run: |
-          if [ "$DRY_RUN" != "true" ]; then
-            : "${GPG_PRIVATE_KEY:?GPG_PRIVATE_KEY is required for publishing}"
-            key_file=$(mktemp)
-            trap 'rm -f "$key_file"' EXIT
-            printf '%s' "$GPG_PRIVATE_KEY" > "$key_file"
-          fi
+          : "${GPG_PRIVATE_KEY:?GPG_PRIVATE_KEY is required for publishing}"
+          umask 077
+          key_file=$(mktemp)
+          trap 'rm -f "$key_file"' EXIT
+          printf '%s' "$GPG_PRIVATE_KEY" > "$key_file"
 
-          cells=$(jq -r '.[] | [."app-id", .arch, .branch, (."run-linter" // false)] | @tsv' <<< "$MATRIX")
-          while IFS=$'\t' read -r app_id arch branch run_linter; do
-            echo "::group::Build $app_id ($arch)"
-            aetherpak build \
-              --config aetherpak.yaml \
-              --app-id "$app_id" \
-              --arch "$arch" \
-              --branch "$branch" \
-              --repo-path _repo \
-              --run-linter="$run_linter"
-            echo "::endgroup::"
+          aetherpak push-oci \
+            --config aetherpak.yaml \
+            --app-id "$APP_ID" \
+            --arch "$ARCH" \
+            --branch "$BRANCH" \
+            --repo-path _repo \
+            --registry ghcr.io \
+            --oci-repository "${GITHUB_REPOSITORY,,}" \
+            --records-dir _records \
+            --gpg-key "$key_file"
 
-            if [ "$DRY_RUN" != "true" ]; then
-              echo "::group::Publish $app_id ($arch)"
-              aetherpak push-oci \
-                --config aetherpak.yaml \
-                --app-id "$app_id" \
-                --arch "$arch" \
-                --branch "$branch" \
-                --repo-path _repo \
-                --registry ghcr.io \
-                --oci-repository "${GITHUB_REPOSITORY,,}" \
-                --records-dir _records \
-                --gpg-key "$key_file"
-              echo "::endgroup::"
-            fi
-          done <<< "$cells"
+      - name: Upload publish records
+        if: ${{ !inputs.dry-run }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: aetherpak-record-${{ matrix.app-id }}-${{ matrix.arch }}-${{ matrix.branch }}
+          path: _records
+          # Preserve .aetherpak-cells and the app/Debug record directories.
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    name: Publish repository metadata
+    needs: [plan, build]
+    if: ${{ !cancelled() && !failure() && !inputs.dry-run && (inputs.reconcile-only || needs.plan.outputs.count != '0') }}
+    runs-on: ubuntu-26.04
+    container:
+      image: ghcr.io/aetherpak/cli:v0.33.3
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Prepare records directory
+        run: mkdir -pv _records
+
+      - name: Download publish records
+        if: ${{ !inputs.reconcile-only }}
+        uses: actions/download-artifact@v8
+        with:
+          pattern: aetherpak-record-*
+          path: _records
+          merge-multiple: true
 
       - name: Build repository site
-        if: ${{ !inputs.dry-run && (inputs.reconcile-only || steps.plan.outputs.count != '0') }}
         uses: aetherpak/actions/publish-site@v3
         with:
           config: aetherpak.yaml
@@ -134,14 +180,29 @@ jobs:
           upload-pages-artifact: false
           cli-version: v0.33.3
 
-      - name: Upload repository metadata
-        if: ${{ !inputs.dry-run && (inputs.reconcile-only || steps.plan.outputs.count != '0') }}
-        uses: ryand56/r2-upload-action@v1.5
+      - name: Setup rclone
+        uses: AnimMouse/setup-rclone@v1.12.0
         with:
-          r2-account-id: ${{ secrets.R2_ACCOUNT_ID }}
-          r2-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
-          r2-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          r2-bucket: ${{ secrets.R2_BUCKET }}
-          source-dir: _site
-          destination-dir: flatpak
-          keep-file-fresh: true
+          rclone_config: |
+            [r2]
+            type = s3
+            provider = Cloudflare
+            access_key_id = ${{ secrets.R2_ACCESS_KEY_ID }}
+            secret_access_key = ${{ secrets.R2_SECRET_ACCESS_KEY }}
+            region = auto
+            endpoint = https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+            no_check_bucket = true
+          disable_base64: true
+          version: v1.73.1
+
+      - name: Upload repository metadata
+        run: |
+          rclone copy \
+            --checksum \
+            --fast-list \
+            --exclude 'index/static' \
+            _site "r2:${{ secrets.R2_BUCKET }}/flatpak"
+
+          rclone copyto \
+            --checksum \
+            _site/index/static "r2:${{ secrets.R2_BUCKET }}/flatpak/index/static"
