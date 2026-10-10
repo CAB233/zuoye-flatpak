@@ -36,38 +36,31 @@ modules:
   - name: aliyunpan
     buildsystem: simple
     build-commands:
+      - bsdtar -xf aliyunpan.xz
+      - mv opt/阿里云盘小白羊 ${FLATPAK_DEST}/alixby
+      - mv app.asar ${FLATPAK_DEST}/alixby/resources/app.asar
       - install -Dvm644 ${FLATPAK_ID}.png -t ${FLATPAK_DEST}/share/icons/hicolor/256x256/apps
       - install -Dvm644 ${FLATPAK_ID}.desktop -t ${FLATPAK_DEST}/share/applications
       - install -Dvm644 ${FLATPAK_ID}.metainfo.xml -t ${FLATPAK_DEST}/share/metainfo
-      - install -Dvm755 apply_extra -t ${FLATPAK_DEST}/bin
       - install -Dvm755 alixby.sh /app/bin/alixby
     sources:
-      - type: extra-data
-        filename: aliyunpan.xz
+      - type: file
+        dest-filename: aliyunpan.xz
         only-arches:
           - x86_64
         url: https://repo.zuoye.win/archive/aliyunpan-odomu-bin/alixby-3.24.41217-linux-x64.pacman
         sha256: 552bd1f0562868afb144718dce7a58ecb49fbe049c7569b129d0f03764bfa02e
-        size: 70270712
-      - type: extra-data
-        filename: app.asar
+      - type: file
+        dest-filename: app.asar
         url: https://repo.zuoye.win/archive/aliyunpan-odomu-bin/app.asar
         sha256: 9a3115a6a892b7a7d9c87713cfa6a0b0d15d279a3d906a7dc2cbb5ac2764a81d
-        size: 9182508
-      - type: script
-        dest-filename: apply_extra
-        commands:
-          - bsdtar -xf aliyunpan.xz
-          - cp -r opt/阿里云盘小白羊 alixby
-          - mv app.asar alixby/resources/app.asar
-          - rm -r aliyunpan.xz opt/ usr/
       - type: script
         dest-filename: alixby.sh
         commands:
           # Keep tray icon temp files in the app runtime dir so GNOME can resolve them without needing /tmp access
           - export TMPDIR="$XDG_RUNTIME_DIR/app/$FLATPAK_ID"
           - |
-            zypak-wrapper /app/extra/alixby/alixby \
+            zypak-wrapper /app/alixby/alixby \
               --enable-features=UseOzonePlatform \
               --ozone-platform-hint=auto \
               "$@"
