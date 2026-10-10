@@ -60,13 +60,7 @@ modules:
       - type: script
         dest-filename: piclist.sh
         commands:
-          - |
-            if [ -n "${WAYLAND_DISPLAY:-}" ]; then
-              args="--enable-wayland-ime --wayland-text-input-version=3"
-            else
-              args=""
-            fi
-          - exec zypak-wrapper /app/PicList/PicList $args "$@"
+          - exec zypak-wrapper /app/PicList/PicList "$@"
       - type: file
         path: io.github.kuingsmile.PicList.png
       - type: file
