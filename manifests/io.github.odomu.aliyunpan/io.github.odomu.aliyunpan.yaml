@@ -37,8 +37,15 @@ modules:
     buildsystem: simple
     build-commands:
       - bsdtar -xf aliyunpan.xz
-      - mv opt/阿里云盘小白羊 ${FLATPAK_DEST}/alixby
-      - mv app.asar ${FLATPAK_DEST}/alixby/resources/app.asar
+      - mkdir -pv electron-runtime
+      - bsdtar -xf electron.zip -C electron-runtime
+      - mv -v "opt/阿里云盘小白羊/resources" app-resources
+      - mv -v app.asar app-resources/app.asar
+      - mkdir -pv ${FLATPAK_DEST}/alixby
+      - cp -av electron-runtime/. ${FLATPAK_DEST}/alixby/
+      - rm -rv ${FLATPAK_DEST}/alixby/resources
+      - mv -v app-resources ${FLATPAK_DEST}/alixby/resources
+      - mv -v ${FLATPAK_DEST}/alixby/electron ${FLATPAK_DEST}/alixby/alixby
       - install -Dvm644 ${FLATPAK_ID}.png -t ${FLATPAK_DEST}/share/icons/hicolor/256x256/apps
       - install -Dvm644 ${FLATPAK_ID}.desktop -t ${FLATPAK_DEST}/share/applications
       - install -Dvm644 ${FLATPAK_ID}.metainfo.xml -t ${FLATPAK_DEST}/share/metainfo
@@ -54,19 +61,25 @@ modules:
         dest-filename: app.asar
         url: https://repo.zuoye.win/archive/aliyunpan-odomu-bin/app.asar
         sha256: 9a3115a6a892b7a7d9c87713cfa6a0b0d15d279a3d906a7dc2cbb5ac2764a81d
+      - type: file
+        dest-filename: electron.zip
+        only-arches:
+          - x86_64
+        url: https://github.com/electron/electron/releases/download/v42.11.12/electron-v42.11.12-linux-x64.zip
+        sha256: 1f17c115389c6395ce4b19b29ee2ec4be2208257514d61e269f1c0a7323bd45d
+        x-checker-data:
+          type: json
+          url: https://api.github.com/repos/electron/electron/releases?per_page=100
+          version-query: '[.[] | select(.prerelease == false)
+            | select(.tag_name | startswith("v42."))][0].tag_name | sub("^v"; "")'
+          url-query: '"https://github.com/electron/electron/releases/download/v" + $version
+            + "/electron-v" + $version + "-linux-x64.zip"'
       - type: script
         dest-filename: alixby.sh
         commands:
           # Keep tray icon temp files in the app runtime dir so GNOME can resolve them without needing /tmp access
           - export TMPDIR="$XDG_RUNTIME_DIR/app/$FLATPAK_ID"
-          - |
-            FLAGS=()
-            if [[ -n "${WAYLAND_DISPLAY:-}" ]]; then
-              FLAGS+=(--enable-features=UseOzonePlatform --enable-wayland-ime --ozone-platform=wayland)
-            else
-              FLAGS+=(--ozone-platform=x11)
-            fi
-          - exec zypak-wrapper /app/alixby/alixby "${FLAGS[@]}" "$@"
+          - exec zypak-wrapper /app/alixby/alixby "$@"
       - type: file
         path: io.github.odomu.aliyunpan.png
       - type: file
