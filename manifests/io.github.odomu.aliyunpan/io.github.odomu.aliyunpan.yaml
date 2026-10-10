@@ -60,10 +60,13 @@ modules:
           # Keep tray icon temp files in the app runtime dir so GNOME can resolve them without needing /tmp access
           - export TMPDIR="$XDG_RUNTIME_DIR/app/$FLATPAK_ID"
           - |
-            zypak-wrapper /app/alixby/alixby \
-              --enable-features=UseOzonePlatform \
-              --ozone-platform-hint=auto \
-              "$@"
+            FLAGS=()
+            if [[ -n "${WAYLAND_DISPLAY:-}" ]]; then
+              FLAGS+=(--enable-features=UseOzonePlatform --enable-wayland-ime --ozone-platform=wayland)
+            else
+              FLAGS+=(--ozone-platform=x11)
+            fi
+          - exec zypak-wrapper /app/alixby/alixby "${FLAGS[@]}" "$@"
       - type: file
         path: io.github.odomu.aliyunpan.png
       - type: file
