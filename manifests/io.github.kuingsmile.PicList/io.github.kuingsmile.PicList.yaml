@@ -37,19 +37,20 @@ modules:
   - name: piclist
     buildsystem: simple
     build-commands:
+      - bsdtar -xf piclist.deb
+      - bsdtar -xf data.tar.xz
+      - mv opt/PicList ${FLATPAK_DEST}/PicList
       - install -Dvm644 ${FLATPAK_ID}.png -t ${FLATPAK_DEST}/share/icons/hicolor/512x512/apps/
       - install -Dvm644 ${FLATPAK_ID}.desktop -t ${FLATPAK_DEST}/share/applications/
       - install -Dvm644 ${FLATPAK_ID}.metainfo.xml ${FLATPAK_DEST}/share/metainfo/${FLATPAK_ID}.metainfo.xml
       - install -Dvm755 piclist.sh /app/bin/piclist
-      - install -Dvm755 apply_extra -t ${FLATPAK_DEST}/bin
     sources:
-      - type: extra-data
-        filename: piclist.deb
+      - type: file
+        dest-filename: piclist.deb
         only-arches:
           - x86_64
         url: https://github.com/Kuingsmile/PicList/releases/download/v3.5.0/PicList-3.5.0-amd64.deb
         sha256: 301cd66712065643ff5fca5b001b4c0c399dfd55a382f59168a047d5c51e64e6
-        size: 95588070
         x-checker-data:
           type: json
           url: https://api.github.com/repos/Kuingsmile/PicList/releases/latest
@@ -57,16 +58,9 @@ modules:
           url-query: .assets[] | select(.name == "PicList-" + $version + "-amd64.deb")
             | .browser_download_url
       - type: script
-        dest-filename: apply_extra
-        commands:
-          - bsdtar -xf piclist.deb
-          - bsdtar -xf data.tar.xz
-          - mv opt/PicList PicList
-          - rm -r piclist.deb control.tar.* data.tar.xz debian-binary usr/ opt/
-      - type: script
         dest-filename: piclist.sh
         commands:
-          - zypak-wrapper /app/extra/PicList/PicList "$@"
+          - zypak-wrapper /app/PicList/PicList "$@"
       - type: file
         path: io.github.kuingsmile.PicList.png
       - type: file
