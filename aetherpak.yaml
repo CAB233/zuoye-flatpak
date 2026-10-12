@@ -27,3 +27,9 @@ apps:
     branch: stable
     arches:
       - x86_64
+
+  - id: com.github.marktext.marktext
+    manifest: manifests/com.github.marktext.marktext/com.github.marktext.marktext.yaml
+    branch: stable
+    arches:
+      - x86_64
