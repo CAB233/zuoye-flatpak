@@ -34,7 +34,7 @@ modules:
       - pnpm install --frozen-lockfile --ignore-scripts --store-dir=${FLATPAK_DEST}/share/build-cache/pnpm
       - pnpm exec tsx scripts/postinstall.ts
       - pnpm run build
-      - pnpm exec electron-builder --linux --dir --publish never --config.electronDist=node_modules/electron/dist
+      - pnpm --dir packages/desktop exec electron-builder --linux --dir --publish never --config.electronDist=node_modules/electron/dist
       - mkdir -pv ${FLATPAK_DEST}/marktext
       - cp -av dist/linux*-unpacked/. ${FLATPAK_DEST}/marktext/
       - install -Dvm644 ${FLATPAK_ID}.desktop -t ${FLATPAK_DEST}/share/applications
@@ -50,8 +50,8 @@ modules:
     sources:
       - type: git
         url: https://github.com/marktext/marktext.git
-        tag: v0.19.0
-        commit: 32199cdf617ec1e0af3c13f563046a5403ae3321
+        tag: v0.21.2
+        commit: ae7a869c989950a3a56ce5c2f7fc0df12c652933
         x-checker-data:
           type: git
           tag-pattern: ^v([\d.]+)$
