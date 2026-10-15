@@ -6,8 +6,6 @@ on:
       - stable
     paths:
       - "manifests/**"
-      - "aetherpak.yaml"
-      - ".github/workflows/build.yaml"
   workflow_dispatch:
     inputs:
       app:
@@ -182,9 +180,9 @@ jobs:
           upload-pages-artifact: false
           cli-version: v0.33.3
 
-      - name: Install rclone download dependencies
+      - name: Install publishing dependencies
         run: |
-          microdnf install -y --setopt=install_weak_deps=0 --nodocs wget unzip
+          microdnf install -y --setopt=install_weak_deps=0 --nodocs wget unzip jq
 
       - name: Setup rclone
         uses: AnimMouse/setup-rclone@v1.12.0
@@ -212,3 +210,48 @@ jobs:
           rclone copyto \
             --checksum \
             _site/index/static "r2:${{ secrets.R2_BUCKET }}/flatpak/index/static"
+
+      - name: Prune unreferenced signatures
+        run: |
+          filters=$(mktemp)
+          trap 'rm -f "$filters"' EXIT
+
+          # Keep every repository/digest referenced by the published index.
+          # Validate the entire index before allowing any remote deletion.
+          jq -er '
+            if (.Results | type) != "array" then
+              error("index/static.Results must be an array")
+            else . end
+            | [
+                .Results[]
+                | if (.Name | type) != "string" then
+                    error("index/static repository name must be a string")
+                  elif (.Name | test("^[a-z0-9][a-z0-9._-]*(/[a-z0-9][a-z0-9._-]*)*$") | not) then
+                    error("index/static contains an invalid repository name")
+                  else . end
+                | .Name as $name
+                | if (.Images | type) != "array" then
+                    error("index/static.Images must be an array")
+                  else . end
+                | .Images[].Digest
+                | if type != "string" then
+                    error("index/static digest must be a string")
+                  elif (test("^sha(256:[0-9a-f]{64}|512:[0-9a-f]{128})$") | not) then
+                    error("index/static contains an invalid digest")
+                  else "- /\($name)@\(sub(":"; "="))/**" end
+              ]
+            | if length == 0 then
+                error("index/static must reference at least one image before pruning")
+              else unique[] end
+          ' _site/index/static > "$filters"
+
+          # Limit deletion to lookaside signature files; preserve key.asc.
+          printf '%s\n' \
+            '+ /{{[a-z0-9][a-z0-9._/-]*@sha(256|512)=[0-9a-f]+/signature-[1-9][0-9]*}}' \
+            '- **' >> "$filters"
+
+          rclone delete \
+            --fast-list \
+            --verbose \
+            --filter-from "$filters" \
+            "r2:${{ secrets.R2_BUCKET }}/flatpak/sigs"
