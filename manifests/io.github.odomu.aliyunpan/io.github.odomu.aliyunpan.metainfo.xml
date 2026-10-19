@@ -11,4 +11,9 @@
     </p>
   </description>
   <launchable type="desktop-id">io.github.odomu.aliyunpan.desktop</launchable>
+  <releases>
+    <release version="42.11.15" date="2026-10-16">
+      <description></description>
+    </release>
+  </releases>
 </component>
