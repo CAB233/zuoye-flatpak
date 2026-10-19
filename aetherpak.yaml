@@ -33,3 +33,9 @@ apps:
     branch: stable
     arches:
       - x86_64
+
+  - id: com.vscodium.codium
+    manifest: manifests/com.vscodium.codium/com.vscodium.codium.yaml
+    branch: stable
+    arches:
+      - x86_64
