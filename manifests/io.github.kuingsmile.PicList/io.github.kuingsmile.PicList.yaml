@@ -49,8 +49,8 @@ modules:
         dest-filename: piclist.deb
         only-arches:
           - x86_64
-        url: https://github.com/Kuingsmile/PicList/releases/download/v3.5.0/PicList-3.5.0-amd64.deb
-        sha256: 301cd66712065643ff5fca5b001b4c0c399dfd55a382f59168a047d5c51e64e6
+        url: https://github.com/Kuingsmile/PicList/releases/download/v3.6.1/PicList-3.6.1-amd64.deb
+        sha256: bac87f3b4044ab63923baceaf71f3e86081baa2b88e729ab03778af1d9f4a38b
         x-checker-data:
           type: json
           url: https://api.github.com/repos/Kuingsmile/PicList/releases/latest
