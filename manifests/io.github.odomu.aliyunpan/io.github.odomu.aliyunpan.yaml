@@ -65,15 +65,15 @@ modules:
         dest-filename: electron.zip
         only-arches:
           - x86_64
-        url: https://github.com/electron/electron/releases/download/v42.11.12/electron-v42.11.12-linux-x64.zip
-        sha256: 1f17c115389c6395ce4b19b29ee2ec4be2208257514d61e269f1c0a7323bd45d
+        url: https://github.com/electron/electron/releases/download/v42.11.15/electron-v42.11.15-linux-x64.zip
+        sha256: 5624ebaa0055cee6ea624e41ba9012e1ac76857448d197dbaf36c4d1812cc681
         x-checker-data:
           type: json
           url: https://api.github.com/repos/electron/electron/releases?per_page=100
-          version-query: '[.[] | select(.prerelease == false)
-            | select(.tag_name | startswith("v42."))][0].tag_name | sub("^v"; "")'
-          url-query: '"https://github.com/electron/electron/releases/download/v" + $version
-            + "/electron-v" + $version + "-linux-x64.zip"'
+          version-query: '[.[] | select(.prerelease == false) | select(.tag_name |
+            startswith("v42."))][0].tag_name | sub("^v"; "")'
+          url-query: '"https://github.com/electron/electron/releases/download/v" +
+            $version + "/electron-v" + $version + "-linux-x64.zip"'
       - type: script
         dest-filename: alixby.sh
         commands:
