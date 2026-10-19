@@ -12,8 +12,11 @@
   </description>
   <launchable type="desktop-id">io.github.kuingsmile.PicList.desktop</launchable>
   <releases>
-    <release version="3.5.0" date="2026-06-14">
+    <release version="3.6.1" date="2026-10-14">
       <description></description>
+    </release>
+    <release version="3.5.0" date="2026-06-14">
+      <description/>
     </release>
   </releases>
 </component>
