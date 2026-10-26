@@ -51,8 +51,8 @@ modules:
     sources:
       - type: git
         url: https://github.com/marktext/marktext.git
-        tag: v0.22.0
-        commit: 93f239d67e960102d9b6944152e2a5ffe60cc8d9
+        tag: v0.23.0
+        commit: 18fdc1eddc7d36d9b205180d058982f71f4f6373
         x-checker-data:
           type: git
           tag-pattern: ^v([\d.]+)$
