@@ -41,7 +41,7 @@ jobs:
     name: Plan build matrix
     runs-on: ubuntu-26.04
     container:
-      image: ghcr.io/aetherpak/cli:v0.33.3
+      image: ghcr.io/aetherpak/cli:v0.34.0
     outputs:
       matrix: ${{ steps.plan.outputs.matrix || '[]' }}
       count: ${{ steps.plan.outputs.count || '0' }}
@@ -54,14 +54,13 @@ jobs:
       - name: Plan changed apps
         id: plan
         if: ${{ !inputs.reconcile-only }}
-        uses: aetherpak/actions/plan@v3
+        uses: aetherpak/actions/plan@v3.14.0
         with:
           config: aetherpak.yaml
           force: ${{ inputs.force-all && 'all' || inputs.app || '' }}
           base-sha: ${{ github.event.before || '' }}
-          workflow-path: .github/workflows/build.yaml
           branch: stable
-          cli-version: v0.33.3
+          cli-version: v0.34.0
 
   build:
     name: Build ${{ matrix.app-id }} (${{ matrix.arch }})
@@ -73,7 +72,7 @@ jobs:
       matrix:
         include: ${{ fromJSON(needs.plan.outputs.matrix) }}
     container:
-      image: ghcr.io/aetherpak/cli:v0.33.3-builder
+      image: ghcr.io/aetherpak/cli:v0.34.0-builder
       options: --privileged
     steps:
       - name: Checkout
@@ -150,7 +149,7 @@ jobs:
     if: ${{ !cancelled() && needs.plan.result == 'success' && !inputs.dry-run && (inputs.reconcile-only || needs.plan.outputs.count != '0') }}
     runs-on: ubuntu-26.04
     container:
-      image: ghcr.io/aetherpak/cli:v0.33.3
+      image: ghcr.io/aetherpak/cli:v0.34.0
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -167,7 +166,7 @@ jobs:
           merge-multiple: true
 
       - name: Build repository site
-        uses: aetherpak/actions/publish-site@v3
+        uses: aetherpak/actions/publish-site@v3.14.0
         with:
           config: aetherpak.yaml
           records-dir: _records
@@ -178,7 +177,7 @@ jobs:
           signing: gpg
           gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
           upload-pages-artifact: false
-          cli-version: v0.33.3
+          cli-version: v0.34.0
 
       - name: Install publishing dependencies
         run: |
