@@ -74,7 +74,7 @@ modules:
           - find ./ -type d -exec chmod 755 {} \;
           - |
             # 解包临时文件和 Debian 安装目录。
-            rm -rv -- \
+            rm -r -- \
               mcloud.deb \
               control.tar.* \
               data.tar.* \
@@ -83,19 +83,19 @@ modules:
               usr/
 
             # 冗余的 Node.js 依赖和 zip-7z 文件。
-            rm -rv -- \
+            rm -r -- \
               mcloud/resources/app.asar.unpacked/node_modules/phantomjs-prebuilt \
               mcloud/resources/app.asar.unpacked/node_modules/zip-7z/bin \
               mcloud/resources/app.asar.unpacked/node_modules/zip-7z/src
 
             # 其他平台的资源和 Windows 插件。
-            rm -rv -- \
+            rm -r -- \
               mcloud/resources/app.asar.unpacked/resources/icons_mac/ \
               mcloud/resources/app.asar.unpacked/resources/uos* \
               mcloud/plugins/gmssl.dll
 
             # ICU 由 icu66 模块提供，清理 deb 内附的旧版本。
-            rm -rv -- mcloud/processes/libicu*.so*
+            rm -r -- mcloud/processes/libicu*.so*
 
           - |
             # 麒麟版 1.1.1：日志资源由 log4cpp 的 Category 负责回收，
