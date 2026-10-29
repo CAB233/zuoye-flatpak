@@ -63,7 +63,7 @@ jobs:
           cli-version: v0.34.0
 
   build:
-    name: Build ${{ matrix.app-id }} (${{ matrix.arch }})
+    name: Build ${{ matrix.app-id }}
     needs: plan
     if: ${{ !inputs.reconcile-only && needs.plan.outputs.count != '0' }}
     runs-on: ${{ matrix.runner }}
@@ -103,8 +103,42 @@ jobs:
             --repo-path _repo \
             --run-linter="$RUN_LINTER"
 
-      - name: Push package
+      - name: Upload OSTree repo
         if: ${{ !inputs.dry-run }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: repo-${{ matrix.app-id }}-${{ matrix.arch }}-${{ matrix.branch }}
+          path: _repo
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  publish-oci:
+    name: Push ${{ matrix.app-id }} (${{ matrix.arch }})
+    needs: [plan, build]
+    # Pushing is decoupled from building: it can be retried on its own, and
+    # image delta generation (previous layer download + diff) does not slow
+    # down the build jobs. A failed build cell has no repo artifact, so only
+    # that cell's push fails.
+    if: ${{ !cancelled() && needs.plan.result == 'success' && !inputs.reconcile-only && !inputs.dry-run && needs.plan.outputs.count != '0' }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    container:
+      image: ghcr.io/aetherpak/cli:v0.34.0-builder
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Download OSTree repo
+        uses: actions/download-artifact@v8
+        with:
+          name: repo-${{ matrix.app-id }}-${{ matrix.arch }}-${{ matrix.branch }}
+          path: _repo
+
+      - name: Push package
         env:
           APP_ID: ${{ matrix.app-id }}
           ARCH: ${{ matrix.arch }}
@@ -131,7 +165,6 @@ jobs:
             --gpg-key "$key_file"
 
       - name: Upload publish records
-        if: ${{ !inputs.dry-run }}
         uses: actions/upload-artifact@v7
         with:
           name: aetherpak-record-${{ matrix.app-id }}-${{ matrix.arch }}-${{ matrix.branch }}
@@ -143,9 +176,9 @@ jobs:
 
   publish:
     name: Publish repository metadata
-    needs: [plan, build]
-    # Successful matrix jobs may have already pushed packages when another fails.
-    # Reconcile GHCR and publish their records after all build jobs finish.
+    needs: [plan, publish-oci]
+    # Push jobs may already have published packages when another cell fails.
+    # Reconcile GHCR and publish their records after all push jobs finish.
     if: ${{ !cancelled() && needs.plan.result == 'success' && !inputs.dry-run && (inputs.reconcile-only || needs.plan.outputs.count != '0') }}
     runs-on: ubuntu-26.04
     container:
@@ -181,7 +214,7 @@ jobs:
 
       - name: Install publishing dependencies
         run: |
-          microdnf install -y --setopt=install_weak_deps=0 --nodocs wget unzip jq
+          microdnf install -y --setopt=install_weak_deps=0 --nodocs wget unzip
 
       - name: Setup rclone
         uses: AnimMouse/setup-rclone@v1.12.0
@@ -209,48 +242,3 @@ jobs:
           rclone copyto \
             --checksum \
             _site/index/static "r2:${{ secrets.R2_BUCKET }}/flatpak/index/static"
-
-      - name: Prune unreferenced signatures
-        run: |
-          filters=$(mktemp)
-          trap 'rm -f "$filters"' EXIT
-
-          # Keep every repository/digest referenced by the published index.
-          # Validate the entire index before allowing any remote deletion.
-          jq -er '
-            if (.Results | type) != "array" then
-              error("index/static.Results must be an array")
-            else . end
-            | [
-                .Results[]
-                | if (.Name | type) != "string" then
-                    error("index/static repository name must be a string")
-                  elif (.Name | test("^[a-z0-9][a-z0-9._-]*(/[a-z0-9][a-z0-9._-]*)*$") | not) then
-                    error("index/static contains an invalid repository name")
-                  else . end
-                | .Name as $name
-                | if (.Images | type) != "array" then
-                    error("index/static.Images must be an array")
-                  else . end
-                | .Images[].Digest
-                | if type != "string" then
-                    error("index/static digest must be a string")
-                  elif (test("^sha(256:[0-9a-f]{64}|512:[0-9a-f]{128})$") | not) then
-                    error("index/static contains an invalid digest")
-                  else "- /\($name)@\(sub(":"; "="))/**" end
-              ]
-            | if length == 0 then
-                error("index/static must reference at least one image before pruning")
-              else unique[] end
-          ' _site/index/static > "$filters"
-
-          # Limit deletion to lookaside signature files; preserve key.asc.
-          printf '%s\n' \
-            '+ /{{[a-z0-9][a-z0-9._/-]*@sha(256|512)=[0-9a-f]+/signature-[1-9][0-9]*}}' \
-            '- **' >> "$filters"
-
-          rclone delete \
-            --fast-list \
-            --verbose \
-            --filter-from "$filters" \
-            "r2:${{ secrets.R2_BUCKET }}/flatpak/sigs"

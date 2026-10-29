@@ -1,0 +1,107 @@
+name: Prune
+
+on:
+  schedule:
+    # Every Monday at 04:17 UTC
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: "Report what would be removed without deleting anything"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+# Share the publishing lock so pruning never races an in-flight release.
+concurrency:
+  group: zuoye-flatpak
+  cancel-in-progress: false
+
+jobs:
+  # Image delta tags are deliberately not pruned here: `aetherpak deltas prune`
+  # deletes through the OCI distribution API, which GHCR answers with 405
+  # UNSUPPORTED. Re-add a GitHub REST API based cleanup once upstream supports it.
+  signatures:
+    name: Prune unreferenced signatures
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Setup rclone
+        uses: AnimMouse/setup-rclone@v1.12.0
+        with:
+          rclone_config: |
+            [r2]
+            type = s3
+            provider = Cloudflare
+            access_key_id = ${{ secrets.R2_ACCESS_KEY_ID }}
+            secret_access_key = ${{ secrets.R2_SECRET_ACCESS_KEY }}
+            region = auto
+            endpoint = https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+            no_check_bucket = true
+          disable_base64: true
+          version: v1.73.1
+
+      # Signature lookaside files are only valid for the index entries that
+      # reference them, so anything not referenced by the published index is
+      # stale. Scheduled runs prune; manual runs default to a dry run.
+      - name: Prune signatures
+        env:
+          DRY_RUN: ${{ inputs.dry-run || false }}
+          SITE_URL: https://repo.zuoye.win/flatpak
+        run: |
+          # Fetch the same index clients use. The cache-busting query avoids a
+          # stale CDN copy, which would make referenced signatures look unused.
+          mkdir -p _index
+          curl -fsSL --retry 3 --retry-delay 2 \
+            "$SITE_URL/index/static?ts=$(date +%s)" -o _index/static
+
+          filters=$(mktemp)
+          trap 'rm -f "$filters"' EXIT
+
+          # Keep every repository/digest referenced by the published index.
+          # Validate the entire index before allowing any remote deletion.
+          jq -er '
+            if (.Results | type) != "array" then
+              error("index/static.Results must be an array")
+            else . end
+            | [
+                .Results[]
+                | if (.Name | type) != "string" then
+                    error("index/static repository name must be a string")
+                  elif (.Name | test("^[a-z0-9][a-z0-9._-]*(/[a-z0-9][a-z0-9._-]*)*$") | not) then
+                    error("index/static contains an invalid repository name")
+                  else . end
+                | .Name as $name
+                | if (.Images | type) != "array" then
+                    error("index/static.Images must be an array")
+                  else . end
+                | .Images[].Digest
+                | if type != "string" then
+                    error("index/static digest must be a string")
+                  elif (test("^sha(256:[0-9a-f]{64}|512:[0-9a-f]{128})$") | not) then
+                    error("index/static contains an invalid digest")
+                  else "- /\($name)@\(sub(":"; "="))/**" end
+              ]
+            | if length == 0 then
+                error("index/static must reference at least one image before pruning")
+              else unique[] end
+          ' _index/static > "$filters"
+
+          # Limit deletion to lookaside signature files; preserve key.asc.
+          printf '%s\n' \
+            '+ /{{[a-z0-9][a-z0-9._/-]*@sha(256|512)=[0-9a-f]+/signature-[1-9][0-9]*}}' \
+            '- **' >> "$filters"
+
+          dry_run=()
+          [ "$DRY_RUN" = "true" ] && dry_run+=(--dry-run)
+
+          # --min-age protects signatures uploaded by a publish whose index
+          # upload lagged, so a stale index cannot make them look unreferenced.
+          rclone delete \
+            --fast-list \
+            --verbose \
+            --min-age 7d \
+            "${dry_run[@]}" \
+            --filter-from "$filters" \
+            "r2:${{ secrets.R2_BUCKET }}/flatpak/sigs"
