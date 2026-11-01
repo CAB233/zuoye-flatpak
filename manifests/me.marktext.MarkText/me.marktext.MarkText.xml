@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>com.github.marktext.marktext</id>
+  <id>me.marktext.MarkText</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MIT</project_license>
   <name>MarkText</name>
@@ -27,7 +27,7 @@
   <url type="homepage">https://github.com/marktext/marktext</url>
   <url type="bugtracker">https://github.com/marktext/marktext/issues</url>
   <url type="vcs-browser">https://github.com/marktext/marktext</url>
-  <launchable type="desktop-id">com.github.marktext.marktext.desktop</launchable>
+  <launchable type="desktop-id">me.marktext.MarkText.desktop</launchable>
   <content_rating type="oars-1.1"/>
   <screenshots>
     <screenshot type="default">

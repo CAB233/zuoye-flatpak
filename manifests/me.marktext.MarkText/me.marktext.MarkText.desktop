@@ -4,7 +4,7 @@ Comment=Next generation markdown editor
 Exec=marktext %F
 Terminal=false
 Type=Application
-Icon=com.github.marktext.marktext
+Icon=me.marktext.MarkText
 Categories=Office;TextEditor;Utility;
 MimeType=text/markdown;
 Keywords=marktext;
@@ -14,4 +14,4 @@ Actions=NewWindow;
 [Desktop Action NewWindow]
 Name=New Window
 Exec=marktext --new-window %F
-Icon=com.github.marktext.marktext
+Icon=me.marktext.MarkText

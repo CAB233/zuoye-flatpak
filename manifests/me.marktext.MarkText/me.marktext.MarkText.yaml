@@ -1,4 +1,4 @@
-app-id: com.github.marktext.marktext
+app-id: me.marktext.MarkText
 runtime: org.freedesktop.Platform
 runtime-version: '26.08'
 sdk: org.freedesktop.Sdk
@@ -63,8 +63,8 @@ modules:
           - export TMPDIR="$XDG_RUNTIME_DIR/app/$FLATPAK_ID"
           - exec zypak-wrapper /app/marktext/marktext "$@"
       - type: file
-        path: com.github.marktext.marktext.desktop
+        path: me.marktext.MarkText.desktop
       - type: file
-        path: com.github.marktext.marktext.metainfo.xml
+        path: me.marktext.MarkText.metainfo.xml
       - type: file
-        path: com.github.marktext.marktext.png
+        path: me.marktext.MarkText.png
