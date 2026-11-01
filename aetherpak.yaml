@@ -41,3 +41,9 @@ apps:
     branch: stable
     arches:
       - x86_64
+
+  - id: org.onlyoffice.desktopeditors
+    manifest: manifests/org.onlyoffice.desktopeditors/org.onlyoffice.desktopeditors.yaml
+    branch: stable
+    arches:
+      - x86_64

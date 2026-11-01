@@ -1,0 +1,50 @@
+app-id: org.onlyoffice.desktopeditors
+runtime: org.freedesktop.Platform
+runtime-version: '26.08'
+sdk: org.freedesktop.Sdk
+command: onlyoffice
+separate-locales: false
+finish-args:
+  - --share=ipc
+  - --socket=x11
+  # https://github.com/ONLYOFFICE/DesktopEditors/issues/561
+  # - --socket=wayland
+  - --socket=pulseaudio
+  - --share=network
+  - --talk-name=org.gtk.vfs.*
+  - --filesystem=xdg-documents
+  - --filesystem=~/.local/share/gtk-3.0
+  - --filesystem=xdg-run/gvfs
+  - --filesystem=xdg-run/gvfsd
+  - --device=dri
+  - --env=LC_ALL=C.UTF-8
+
+modules:
+  - name: desktopeditors
+    buildsystem: simple
+    build-commands:
+      - mv opt/onlyoffice/desktopeditors ${FLATPAK_DEST}/onlyoffice
+      - install -Dvm755 onlyoffice.sh ${FLATPAK_DEST}/bin/onlyoffice
+      - install -Dvm644 ${FLATPAK_ID}.png -t ${FLATPAK_DEST}/share/icons/hicolor/256x256/apps
+      - install -Dvm644 ${FLATPAK_ID}.desktop -t ${FLATPAK_DEST}/share/applications
+      - install -Dvm644 ${FLATPAK_ID}.metainfo.xml -t ${FLATPAK_DEST}/share/metainfo
+      - echo "package = flatpak" > ${FLATPAK_DEST}/onlyoffice/converter/package.config
+    sources:
+      - type: archive
+        only-arches:
+          - x86_64
+        url: https://download.onlyoffice.com/install/desktop/editors/linux/onlyoffice-desktopeditors-10.0.0-x64.tar.xz
+        sha256: b44158be6499c6fb3813b5904d000f72ef4d93c0e8f6ea6696501e575995da9a
+        strip-components: 0
+      - type: script
+        dest-filename: onlyoffice.sh
+        commands:
+          - export LD_LIBRARY_PATH="/app/onlyoffice:${LD_LIBRARY_PATH}"
+          - export CUSTOM_FONTS_PATH=/run/host/usr/local/share/fonts
+          - exec /app/onlyoffice/DesktopEditors "$@"
+      - type: file
+        path: org.onlyoffice.desktopeditors.png
+      - type: file
+        path: org.onlyoffice.desktopeditors.desktop
+      - type: file
+        path: org.onlyoffice.desktopeditors.metainfo.xml
