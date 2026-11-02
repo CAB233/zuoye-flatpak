@@ -47,3 +47,9 @@ apps:
     branch: stable
     arches:
       - x86_64
+
+  - id: org.comfy.ComfyUI
+    manifest: manifests/org.comfy.ComfyUI/org.comfy.ComfyUI.yaml
+    branch: stable
+    arches:
+      - x86_64

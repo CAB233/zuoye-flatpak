@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.comfy.ComfyUI</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>AGPL-3.0-or-later</project_license>
+  <name>Comfy Desktop</name>
+  <developer id="org.comfy">
+    <name>Comfy Org</name>
+  </developer>
+  <summary>Install, run, and manage ComfyUI from one app</summary>
+  <description>
+    <p>
+      Comfy Desktop is the official desktop application for ComfyUI, the node-based engine for
+      generative AI. It installs ComfyUI into a self-contained, GPU-ready environment and keeps
+      it updated, so you can focus on building workflows instead of managing Python and CUDA.
+    </p>
+    <ul>
+      <li>Run multiple independent ComfyUI installations side by side</li>
+      <li>Isolated, GPU-ready environments with prebuilt PyTorch and GPU wheels</li>
+      <li>One-click updates for ComfyUI and custom nodes</li>
+      <li>Snapshots and rollback for safe experimentation</li>
+      <li>Adopt and migrate existing ComfyUI installations</li>
+    </ul>
+  </description>
+  <url type="homepage">https://github.com/Comfy-Org/Comfy-Desktop</url>
+  <url type="bugtracker">https://github.com/Comfy-Org/Comfy-Desktop/issues</url>
+  <url type="vcs-browser">https://github.com/Comfy-Org/Comfy-Desktop</url>
+  <launchable type="desktop-id">org.comfy.ComfyUI.desktop</launchable>
+  <content_rating type="oars-1.1"/>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Run multiple ComfyUI installs side by side</caption>
+      <image>https://raw.githubusercontent.com/Comfy-Org/Comfy-Desktop/v1.1.8/assets/hero.png</image>
+    </screenshot>
+  </screenshots>
+  <releases>
+    <release version="1.1.8" date="2026-10-22">
+      <description>
+        <p>Initial Flatpak package of Comfy Desktop 1.1.8.</p>
+      </description>
+    </release>
+  </releases>
+</component>

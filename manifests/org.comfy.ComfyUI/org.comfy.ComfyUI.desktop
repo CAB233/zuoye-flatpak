@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Comfy Desktop
+Comment=Comfy Desktop
+Exec=comfyui %U
+Terminal=false
+Type=Application
+Icon=org.comfy.ComfyUI
+StartupWMClass=Comfy Desktop
+Categories=Graphics;2DGraphics;
+Keywords=ComfyUI;AI;image generation;node;

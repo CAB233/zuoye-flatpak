@@ -1,0 +1,57 @@
+app-id: org.comfy.ComfyUI
+runtime: org.freedesktop.Platform
+runtime-version: '26.08'
+sdk: org.freedesktop.Sdk
+base: org.electronjs.Electron2.BaseApp
+base-version: '26.08'
+command: comfyui
+separate-locales: false
+finish-args:
+  - --share=ipc
+  - --share=network
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --socket=pulseaudio
+  - --device=dri
+  - --persist=ComfyUI-Installs
+  - --persist=ComfyUI-Shared
+  - --talk-name=org.freedesktop.FileManager1
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.freedesktop.secrets
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --env=XCURSOR_PATH=/run/host/user-share/icons:/run/host/share/icons
+
+modules:
+  - name: comfyui
+    buildsystem: simple
+    build-commands:
+      - bsdtar -xf comfyui.deb
+      - bsdtar -xf data.tar.xz
+      - mv "opt/Comfy Desktop" ${FLATPAK_DEST}/comfyui
+      - install -Dvm755 comfyui.sh ${FLATPAK_DEST}/bin/comfyui
+      - install -Dvm644 ${FLATPAK_ID}.png -t ${FLATPAK_DEST}/share/icons/hicolor/256x256/apps
+      - install -Dvm644 ${FLATPAK_ID}.desktop -t ${FLATPAK_DEST}/share/applications
+      - install -Dvm644 ${FLATPAK_ID}.metainfo.xml -t ${FLATPAK_DEST}/share/metainfo
+    sources:
+      - type: file
+        dest-filename: comfyui.deb
+        only-arches:
+          - x86_64
+        url: https://dl.todesktop.com/241130tqe9q3y/versions/1.1.8/linux/deb/x64
+        sha256: ff076e83a1a97ead2b19c684394cff8f9395cb6cb6b287dee32888274687cc1e
+        x-checker-data:
+          type: json
+          url: https://api.github.com/repos/Comfy-Org/Comfy-Desktop/releases/latest
+          version-query: .tag_name | sub("^v"; "")
+          url-query: '"https://dl.todesktop.com/241130tqe9q3y/versions/" + $version + "/linux/deb/x64"'
+      - type: script
+        dest-filename: comfyui.sh
+        commands:
+          - export TMPDIR="$XDG_RUNTIME_DIR/app/$FLATPAK_ID"
+          - exec zypak-wrapper /app/comfyui/comfyui-desktop-2 "$@"
+      - type: file
+        path: org.comfy.ComfyUI.png
+      - type: file
+        path: org.comfy.ComfyUI.desktop
+      - type: file
+        path: org.comfy.ComfyUI.metainfo.xml
