@@ -97,8 +97,6 @@ modules:
       - install -Dvm644 ${FLATPAK_ID}.desktop -t ${FLATPAK_DEST}/share/applications
       - install -Dvm644 ${FLATPAK_ID}.metainfo.xml -t ${FLATPAK_DEST}/share/metainfo
       - install -Dvm644 ${FLATPAK_DEST}/thorium/thorium.svg ${FLATPAK_DEST}/share/icons/hicolor/scalable/apps/${FLATPAK_ID}.svg
-      - unlink -- ${FLATPAK_DEST}/thorium/thorium-browser
-      - unlink -- ${FLATPAK_DEST}/thorium/pak
     cleanup:
       - /thorium/thorium.svg
       - /thorium/content_shell.pak
