@@ -89,8 +89,8 @@ modules:
   - name: thorium
     buildsystem: simple
     build-commands:
-      - bsdtar -xf thorium.deb
-      - bsdtar -xf data.tar.xz
+      - ar x thorium.deb
+      - tar xf data.tar.xz
       - mv -v opt/chromium.org/thorium ${FLATPAK_DEST}/thorium
       - install -Dvm755 thorium.sh ${FLATPAK_DEST}/bin/thorium
       - install -Dvm644 cobalt.ini -t ${FLATPAK_DEST}/etc
