@@ -22,4 +22,9 @@
       <image>https://github.com/Alex313031/thorium/blob/main/logos/STAGING/Thorium_Screenshot.png</image>
     </screenshot>
   </screenshots>
+  <releases>
+    <release version="156.0.8078.28" date="2026-10-11">
+      <description></description>
+    </release>
+  </releases>
 </component>

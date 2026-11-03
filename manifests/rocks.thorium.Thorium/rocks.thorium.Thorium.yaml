@@ -14,8 +14,8 @@ finish-args:
   - --socket=cups
   - --socket=pcsc # FIDO2
   - --socket=pulseaudio
-  - --socket=x11
   - --socket=wayland
+  - --socket=fallback-x11
   - --system-talk-name=org.bluez
   - --system-talk-name=org.freedesktop.Avahi
   - --system-talk-name=org.freedesktop.UPower
@@ -89,38 +89,36 @@ modules:
   - name: thorium
     buildsystem: simple
     build-commands:
-      - mkdir -p ${FLATPAK_DEST}/thorium
-      - bsdtar --no-same-owner -xf thorium.zip -C ${FLATPAK_DEST}/thorium
+      - bsdtar -xf thorium.deb
+      - bsdtar -xf data.tar.xz
+      - mv -v opt/chromium.org/thorium ${FLATPAK_DEST}/thorium
       - install -Dvm755 thorium.sh ${FLATPAK_DEST}/bin/thorium
       - install -Dvm644 cobalt.ini -t ${FLATPAK_DEST}/etc
-      - install -Dvm644 rocks.thorium.Thorium.desktop -t ${FLATPAK_DEST}/share/applications
-      - install -Dvm644 rocks.thorium.Thorium.metainfo.xml -t ${FLATPAK_DEST}/share/metainfo
-      - install -Dvm644 ${FLATPAK_DEST}/thorium/thorium.svg ${FLATPAK_DEST}/share/icons/hicolor/scalable/apps/rocks.thorium.Thorium.svg
+      - install -Dvm644 ${FLATPAK_ID}.desktop -t ${FLATPAK_DEST}/share/applications
+      - install -Dvm644 ${FLATPAK_ID}.metainfo.xml -t ${FLATPAK_DEST}/share/metainfo
+      - install -Dvm644 ${FLATPAK_DEST}/thorium/thorium.svg ${FLATPAK_DEST}/share/icons/hicolor/scalable/apps/${FLATPAK_ID}.svg
+      - unlink -- ${FLATPAK_DEST}/thorium/thorium-browser
+      - unlink -- ${FLATPAK_DEST}/thorium/pak
     cleanup:
       - /thorium/thorium.svg
-      - /thorium/chrome-management-service
       - /thorium/content_shell.pak
       - /thorium/default-app-block
-      - /thorium/initial_preferences
       - /thorium/pak
       - /thorium/product_logo_*
       - /thorium/shell_resources.pak
       - /thorium/thorium_shell*
-      - /thorium/*.desktop
-      - /thorium/THORIUM-PORTABLE
-      - /thorium/xdg-*
     sources:
       - type: file
-        url: https://github.com/Alex313031/thorium/releases/download/M138.0.7204.303/thorium-browser_138.0.7204.303_AVX2.zip
-        sha256: 07b980b76735733a1c45b8cba340a2947aa68f9ccdc6f26511135752d4a1ca22
-        dest-filename: thorium.zip
+        url: https://github.com/gz83/thorium/releases/download/M156.0.8078.28/thorium-browser_156.0.8078.28_AVX2.deb
+        sha256: 15496ebae54d15a946e1cad9ecc174f50008cc355e35be58ff339ec23bf00846
+        dest-filename: thorium.deb
         only-arches:
           - x86_64
         x-checker-data:
           type: anitya
           project-id: 373887
           stable-only: true
-          url-template: https://github.com/Alex313031/thorium/releases/download/M${version}/thorium-browser_${version}_AVX2.zip
+          url-template: https://github.com/gz83/thorium/releases/download/M${version}/thorium-browser_${version}_AVX2.deb
       - type: script
         dest-filename: thorium.sh
         commands:
