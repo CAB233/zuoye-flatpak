@@ -37,13 +37,14 @@ modules:
         dest-filename: comfyui.deb
         only-arches:
           - x86_64
-        url: https://dl.todesktop.com/241130tqe9q3y/versions/1.1.8/linux/deb/x64
-        sha256: ff076e83a1a97ead2b19c684394cff8f9395cb6cb6b287dee32888274687cc1e
+        url: https://dl.todesktop.com/241130tqe9q3y/versions/1.1.9/linux/deb/x64
+        sha256: 186495cc3ec5b7cc5f54c4335f5b78c5d386fa7fe3d6c31c9cfcbf8ddea5b19e
         x-checker-data:
           type: json
           url: https://api.github.com/repos/Comfy-Org/Comfy-Desktop/releases/latest
           version-query: .tag_name | sub("^v"; "")
-          url-query: '"https://dl.todesktop.com/241130tqe9q3y/versions/" + $version + "/linux/deb/x64"'
+          url-query: '"https://dl.todesktop.com/241130tqe9q3y/versions/" + $version
+            + "/linux/deb/x64"'
       - type: script
         dest-filename: comfyui.sh
         commands:
