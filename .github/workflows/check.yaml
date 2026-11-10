@@ -63,6 +63,6 @@ jobs:
           GIT_COMMITTER_NAME: YanamiChan[bot]
           GIT_AUTHOR_EMAIL: 182213109+YanamiChan[bot]@users.noreply.github.com
           GIT_COMMITTER_EMAIL: 182213109+YanamiChan[bot]@users.noreply.github.com
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
         with:
           args: --update --never-fork --pr-labels upgrade ${{ env.MANIFESTS_DIR }}/${{ matrix.appid }}/${{ matrix.appid }}.yaml
