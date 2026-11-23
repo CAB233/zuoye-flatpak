@@ -107,8 +107,8 @@ modules:
       - /thorium/thorium_shell*
     sources:
       - type: file
-        url: https://github.com/gz83/thorium/releases/download/M156.0.8078.80/thorium-browser_156.0.8078.80_AVX2.deb
-        sha256: abe1217382d145320331af8331c6c75eba78ff772e3577a5599de4d88902a75b
+        url: https://github.com/gz83/thorium/releases/download/M158.0.8127.41/thorium-browser_158.0.8127.41_AVX2.deb
+        sha256: 35fafa2411200df6376b69f2ffaf357e2debf7261bf9a1cc29d599f6bc4277d1
         dest-filename: thorium.deb
         only-arches:
           - x86_64
